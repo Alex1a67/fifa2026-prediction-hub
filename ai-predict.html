@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AI Predictor - WC2026 Hub</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/data.js"></script>
+<script src="js/shared.js"></script>
+<style>
+.team-selector-box{background:rgba(6,18,50,.85);border:1px solid var(--border);border-radius:1.1rem;padding:1.25rem}
+.team-flag-preview{width:90px;height:68px;border-radius:10px;object-fit:cover;
+  border:2px solid var(--border);margin:0 auto .65rem;display:block;
+  box-shadow:0 0 24px rgba(0,0,0,.5);transition:all .3s ease}
+.rank-badge{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;font-weight:700;
+  color:var(--gold);background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);
+  border-radius:999px;padding:.2rem .6rem;margin-top:.35rem}
+.prob-segment{height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;
+  display:flex;gap:2px;margin:.65rem 0}
+.prob-a{background:linear-gradient(90deg,var(--cyan),#0080ff);border-radius:999px 0 0 999px;height:100%;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.prob-draw{background:rgba(255,255,255,.3);height:100%;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.prob-b{background:linear-gradient(90deg,#ffa500,var(--gold));border-radius:0 999px 999px 0;height:100%;transition:width .9s cubic-bezier(.2,.8,.2,1)}
+.score-display{font-family:'Space Grotesk',monospace;font-size:3.8rem;font-weight:800;
+  color:#fff;text-shadow:0 0 40px rgba(0,212,255,.5);letter-spacing:.05em;line-height:1}
+.result-separator{font-family:'Bebas Neue',sans-serif;font-size:2rem;color:var(--mute);margin:0 1rem}
+.conf-pill{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .85rem;border-radius:999px;
+  font-size:.78rem;font-weight:700;border:1px solid;margin-top:.5rem}
+.api-key-card{border:2px dashed rgba(139,92,246,.4);border-radius:1.1rem;padding:1.5rem;text-align:center}
+.history-mini{display:flex;align-items:center;gap:.65rem;padding:.65rem .85rem;background:var(--glass);border:1px solid var(--border2);border-radius:.8rem;margin-bottom:.45rem;font-size:.82rem}
+</style>
+</head>
+<body>
+<div id="app-nav"></div>
+<main class="page container">
+
+<!-- HEADER -->
+<div style="margin-bottom:2rem">
+  <div class="eyebrow" style="background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.3);color:#c4b5fd">
+    <i class="bi bi-robot"></i> ARTIFICIAL INTELLIGENCE · Powered by Local AI
+  </div>
+  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,7vw,5.5rem);margin-bottom:.4rem;letter-spacing:.02em">
+    AI <span class="grad-gold">MATCH</span> <span class="grad-cyan">PREDICTOR</span>
+  </h1>
+  <p style="color:var(--dim);font-size:.95rem;max-width:50ch">Pilih dua negara dan biarkan AI mensimulasikan pertandingan berdasarkan data historis, kekuatan tim, dan ranking FIFA.</p>
+</div>
+
+<div class="card no-hover" style="padding:1.5rem">
+
+  <div style="display:grid;grid-template-columns:1fr 90px 1fr;gap:1rem;align-items:center">
+
+    <div>
+      <label class="label">Team A</label>
+
+      <img id="flagA"
+           style="width:90px;height:60px;border-radius:12px;margin-bottom:10px;display:block">
+
+      <select id="teamA" class="input"></select>
+    </div>
+
+    <div style="text-align:center">
+      <div class="badge badge-gold">VS</div>
+    </div>
+
+    <div>
+      <label class="label">Team B</label>
+
+      <img id="flagB"
+           style="width:90px;height:60px;border-radius:12px;margin-bottom:10px;display:block">
+
+      <select id="teamB" class="input"></select>
+    </div>
+
+  </div>
+
+  <div style="text-align:center;margin-top:1.5rem">
+
+    <button id="simulateBtn"
+            class="btn btn-gold btn-lg"
+            onclick="startPrediction()">
+
+      🤖 Mulai Simulasi AI
+
+    </button>
+
+  </div>
+
+</div>
+
+<div id="result" style="margin-top:1.5rem"></div>
+
+</main>
+
+<script src="js/ai.js"></script>
+
+<script>
+
+
+async function startPrediction(){
+
+    const A =
+        document.getElementById("teamA").value;
+
+    const B =
+        document.getElementById("teamB").value;
+
+    const resultEl =
+        document.getElementById("result");
+
+    const btn =
+        document.getElementById("simulateBtn");
+
+    // Prevent double-clicks while the AI is "thinking"
+    if(btn){
+        btn.disabled = true;
+    }
+
+    // Show loading animation with rotating status text
+    const loadingInterval = showAILoading(resultEl);
+
+    // Simulated "thinking" delay, randomized between 2s and 5s
+    const thinkTime = 2000 + Math.random() * 3000;
+    await new Promise(resolve => setTimeout(resolve, thinkTime));
+
+    clearInterval(loadingInterval);
+
+    if(btn){
+        btn.disabled = false;
+    }
+
+    const ai =
+        simulateAI(A,B);
+
+    resultEl.innerHTML = `
+    <div class="card no-hover">
+
+        <h2>
+            ${teamName(A)}
+            ${ai.scoreA}
+            -
+            ${ai.scoreB}
+            ${teamName(B)}
+        </h2>
+
+        <p>
+            Winner:
+            ${
+                ai.winner
+                ? teamName(ai.winner)
+                : 'Draw'
+            }
+        </p>
+
+        <p>
+            ${teamName(A)} :
+            ${ai.pA}%
+        </p>
+
+        <p>
+            Draw :
+            ${ai.pD}%
+        </p>
+
+        <p>
+            ${teamName(B)} :
+            ${ai.pB}%
+        </p>
+
+        <p>
+            Confidence:
+            ${ai.confidence}%
+        </p>
+
+    </div>`;
+}
+
+
+</script>
+
+<script>
+let lastResult = null;
+
+/* ── TEAM SELECTORS ──────────────────────────────────────────────────────── */
+function populateSelectors() {
+  const teams = teamList();
+  const optsA = `<option value="">- Pilih Tim A -</option>` + teams.map(t=>`<option value="${t.code}">${_esc(t.name)} (Rank #${t.rank})</option>`).join('');
+  const optsB = `<option value="">- Pilih Tim B -</option>` + teams.map(t=>`<option value="${t.code}">${_esc(t.name)} (Rank #${t.rank})</option>`).join('');
+  document.getElementById('sel-a').innerHTML = optsA;
+  document.getElementById('sel-b').innerHTML = optsB;
+}
+
+function onTeamChange(side) {
+  const code = document.getElementById(`sel-${side}`).value;
+  const flagEl = document.getElementById(`flag-${side}`);
+  const nameEl = document.getElementById(`name-${side}`);
+  const rankEl = document.getElementById(`rank-${side}`);
+  if (code && WC_TEAMS[code]) {
+    flagEl.src = flagUrl(code, 80);
+    nameEl.textContent = teamName(code);
+    rankEl.innerHTML = `<i class="bi bi-bar-chart-fill"></i> Rank #${WC_TEAMS[code].rank}`;
+    rankEl.style.display = 'inline-flex';
+  } else {
+    flagEl.src = ''; nameEl.textContent = 'Pilih Tim'; rankEl.style.display = 'none';
+  }
+  const cA = document.getElementById('sel-a').value;
+  const cB = document.getElementById('sel-b').value;
+  document.getElementById('sim-btn').disabled = !cA || !cB || cA === cB;
+}
+
+
+/* ── RUN SIMULATION ──────────────────────────────────────────────────────── */
+async function runSimulation() {
+  const cA = document.getElementById('sel-a').value;
+  const cB = document.getElementById('sel-b').value;
+  if (!cA || !cB || cA === cB) { toast('Pilih dua tim yang berbeda!','warn'); return; }
+
+  const apiKey = getKey();
+  if (!apiKey) { toast('Setup API Key dulu!','warn'); return; }
+
+  document.getElementById('result-area').style.display = 'block';
+  document.getElementById('result-loading').style.display = 'block';
+  document.getElementById('result-content').style.display = 'none';
+  document.getElementById('sim-btn').disabled = true;
+  window.scrollTo({top:document.getElementById('result-area').offsetTop - 80, behavior:'smooth'});
+
+  const tA = WC_TEAMS[cA], tB = WC_TEAMS[cB];
+
+  const prompt = `Kamu adalah analis ahli FIFA World Cup 2026.
+
+Simulasikan pertandingan antara:
+- Tim A: ${tA.name} (kode: ${cA}, FIFA Rank: #${tA.rank}, WC Wins: ${tA.wcWins})
+- Tim B: ${tB.name} (kode: ${cB}, FIFA Rank: #${tB.rank}, WC Wins: ${tB.wcWins})
+- Konteks: FIFA World Cup 2026 (USA/Canada/Mexico) babak knockout
+
+Pertimbangkan:
+1. FIFA Ranking terkini dan kekuatan skuad
+2. Performa historis di Piala Dunia (gelar, penampilan, konsistensi)
+3. Head-to-head historis kedua tim
+4. Gaya bermain dan kecocokan taktis
+5. Faktor psikologis di turnamen besar
+6. Kekuatan lini depan, tengah, belakang, dan kiper
+
+Berikan HANYA JSON valid berikut (tanpa teks lain):
+{
+  "scoreA": angka gol tim A (integer 0-5),
+  "scoreB": angka gol tim B (integer 0-5),
+  "winProbA": persentase menang Tim A (float, contoh 44.8),
+  "winProbDraw": persentase seri/adu penalti (float),
+  "winProbB": persentase menang Tim B (float, total A+Draw+B = 100),
+  "confidence": float 0-100 (keyakinan AI),
+  "winner": "teamA" | "teamB" | "draw",
+  "analysis": "3-4 kalimat analisis mendalam dalam Bahasa Indonesia",
+  "keyFactors": ["faktor 1", "faktor 2", "faktor 3"],
+  "teamAStrengths": ["kekuatan A1", "kekuatan A2"],
+  "teamBStrengths": ["kekuatan B1", "kekuatan B2"]
+}`;
+
+  try {
+    const resp = await fetch('', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'v-version': '2023-06-01',
+        'v-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'Local AI',
+        max_tokens: 900,
+        messages: [{ role:'user', content:prompt }]
+      })
+    });
+    if (!resp.ok) {
+      const e = await resp.json().catch(()=>({}));
+      throw new Error(e.error?.message || `HTTP ${resp.status}`);
+    }
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '';
+    let r;
+    try { const m = raw.match(/\{[\s\S]*\}/); r = JSON.parse(m ? m[0] : raw); }
+    catch { throw new Error('Format respons AI tidak valid.'); }
+
+    lastResult = { cA, cB, tA:tA.name, tB:tB.name, r };
+    renderResult(cA, cB, tA, tB, r);
+    saveHistory(cA, cB, tA.name, tB.name, r);
+  } catch(err) {
+    let msg = err.message || 'Terjadi kesalahan.';
+    if (msg.includes('401')||msg.includes('authentication')) msg = '';
+    else if (msg.includes('429')) msg = 'Terlalu banyak permintaan. Tunggu lalu coba lagi.';
+    document.getElementById('result-loading').style.display = 'none';
+    document.getElementById('result-content').style.display = 'block';
+    document.getElementById('result-content').innerHTML = `
+      <div style="text-align:center;padding:1.5rem 0">
+        <i class="bi bi-exclamation-triangle-fill" style="font-size:2rem;color:var(--red)"></i>
+        <p style="font-weight:700;color:var(--red);margin:.65rem 0 .4rem">Simulasi Gagal</p>
+        <p style="font-size:.84rem;color:var(--dim);margin-bottom:1rem">${_esc(msg)}</p>
+        <button onclick="runSimulation()" class="btn btn-ghost btn-sm"><i class="bi bi-arrow-repeat"></i> Coba Lagi</button>
+      </div>`;
+    toast(msg,'err',6000);
+  } finally {
+    document.getElementById('sim-btn').disabled = false;
+    document.getElementById('result-loading').style.display = 'none';
+  }
+}
+
+function renderResult(cA, cB, tA, tB, r) {
+  document.getElementById('result-content').style.display = 'block';
+  document.getElementById('result-loading').style.display = 'none';
+
+  document.getElementById('res-flag-a').src = flagUrl(cA, 80);
+  document.getElementById('res-flag-b').src = flagUrl(cB, 80);
+  document.getElementById('res-name-a').textContent = tA.name;
+  document.getElementById('res-name-b').textContent = tB.name;
+  document.getElementById('res-rank-a').textContent = `Rank #${tA.rank}`;
+  document.getElementById('res-rank-b').textContent = `Rank #${tB.rank}`;
+  document.getElementById('res-score-a').textContent = r.scoreA ?? '-';
+  document.getElementById('res-score-b').textContent = r.scoreB ?? '-';
+
+  const winnerName = r.winner==='teamA' ? tA.name : r.winner==='teamB' ? tB.name : 'Seri / Adu Penalti';
+  document.getElementById('res-winner').textContent = winnerName;
+
+  // Probability bars (animate after small delay)
+  setTimeout(() => {
+    const pA=r.winProbA||33, pD=r.winProbDraw||34, pB=r.winProbB||33;
+    document.getElementById('bar-a').style.width = pA + '%';
+    document.getElementById('bar-draw').style.width = pD + '%';
+    document.getElementById('bar-b').style.width = pB + '%';
+    document.getElementById('prob-a-label').textContent = `${tA.name} ${pA.toFixed(1)}%`;
+    document.getElementById('prob-draw-label').textContent = `Draw ${pD.toFixed(1)}%`;
+    document.getElementById('prob-b-label').textContent = `${tB.name} ${pB.toFixed(1)}%`;
+  }, 200);
+
+  // Confidence
+  const conf = r.confidence || 50;
+  const confEl = document.getElementById('conf-pill');
+  const confCol = conf >= 65 ? 'rgba(0,255,136,.3)' : conf >= 40 ? 'rgba(255,215,0,.3)' : 'rgba(255,68,68,.3)';
+  const confTxtCol = conf >= 65 ? 'var(--green)' : conf >= 40 ? 'var(--gold)' : 'var(--red)';
+  confEl.style.background = confCol; confEl.style.borderColor = confCol; confEl.style.color = confTxtCol;
+  confEl.innerHTML = `<i class="bi bi-graph-up"></i> CONFIDENCE ${conf.toFixed(1)}%`;
+
+  document.getElementById('res-analysis-text').textContent = r.analysis || '-';
+
+  if ((r.keyFactors||[]).length) {
+    document.getElementById('res-factors').innerHTML = `
+      <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:#a78bfa;margin-bottom:.45rem;font-weight:700"><i class="bi bi-lightning-fill"></i> FAKTOR KUNCI</div>
+      <div>${(r.keyFactors||[]).map(f=>`<span style="display:inline-flex;align-items:center;gap:.3rem;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.22);border-radius:999px;padding:.25rem .65rem;font-size:.74rem;color:#c4b5fd;margin:.2rem">${_esc(f)}</span>`).join('')}</div>`;
+  }
+}
+
+async function savePrediction() {
+  if (!lastResult) return;
+  const rawName = document.getElementById('ai-uname')?.value.trim();
+  const vn = validateName(rawName);
+  if (!vn.ok) { toast(vn.msg,'warn'); document.getElementById('ai-uname')?.focus(); return; }
+  saveName(vn.val);
+  const { cA, cB, r } = lastResult;
+  try {
+    await db.collection('aiPredictions').add({
+      userName: vn.val,
+      teamA: cA, teamB: cB,
+      scoreA: r.scoreA, scoreB: r.scoreB,
+      winProbA: r.winProbA, winProbDraw: r.winProbDraw, winProbB: r.winProbB,
+      confidence: r.confidence, winner: r.winner,
+      savedAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    toast(`<i class="bi bi-check-circle-fill"></i> Simulasi AI disimpan ke Firebase!`,'ok');
+    confetti(1800);
+  } catch(e) { toast('Gagal simpan: '+e.message,'err',5000); }
+}
+
+function saveHistory(cA, cB, nA, nB, r) {
+  try {
+    const h = JSON.parse(localStorage.getItem('wc26_ai_sim')||'[]');
+    h.unshift({cA,cB,nA,nB,scoreA:r.scoreA,scoreB:r.scoreB,conf:r.confidence,ts:Date.now()});
+    localStorage.setItem('wc26_ai_sim', JSON.stringify(h.slice(0,10)));
+    renderHistory();
+  } catch {}
+}
+
+function renderHistory() {
+  const el = document.getElementById('ai-history'); if (!el) return;
+  try {
+    const h = JSON.parse(localStorage.getItem('wc26_ai_sim')||'[]');
+    if (!h.length) { el.innerHTML='<p style="color:var(--mute);font-size:.84rem">Belum ada simulasi hari ini.</p>'; return; }
+    el.innerHTML = h.slice(0,6).map(item => `
+      <div class="history-mini">
+        <img src="${flagUrl(item.cA,40)}" class="flag flag-sm" alt="">
+        <span style="font-weight:700">${_esc(item.nA)}</span>
+        <span style="font-family:'Space Grotesk',monospace;font-weight:700;color:var(--cyan);padding:0 .4rem">${item.scoreA}–${item.scoreB}</span>
+        <span style="font-weight:700">${_esc(item.nB)}</span>
+        <img src="${flagUrl(item.cB,40)}" class="flag flag-sm" alt="">
+        <span style="font-size:.72rem;color:var(--mute);margin-left:auto">${new Date(item.ts).toLocaleTimeString('id-ID')}</span>
+      </div>`).join('');
+  } catch { el.innerHTML=''; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderNav('ai-predict.html');
+  const k = getKey();
+  if (k) { document.getElementById('api-setup').style.display='none'; document.getElementById('ai-main').style.display='block'; populateSelectors(); renderHistory(); }
+  const savedName = getSavedName();
+  if (savedName && document.getElementById('ai-uname')) document.getElementById('ai-uname').value = savedName;
+});
+</script>
+</body>
+</html>

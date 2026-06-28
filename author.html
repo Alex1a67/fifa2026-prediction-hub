@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Tim Pengembang - WC2026 Hub</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/data.js"></script>
+<script src="js/shared.js"></script>
+<style>
+.author-card{padding:2.5rem 2rem;text-align:center;position:relative;overflow:hidden}
+.author-card::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -20%,rgba(0,212,255,.07),transparent 70%);pointer-events:none}
+.author-avatar{width:7rem;height:7rem;border-radius:50%;margin:0 auto 1.25rem;
+  display:flex;align-items:center;justify-content:center;font-size:2.5rem;
+  border:3px solid rgba(0,212,255,.4);box-shadow:0 0 30px rgba(0,212,255,.25),0 0 60px rgba(0,212,255,.10);
+  position:relative;z-index:1}
+.skill-tag{display:inline-flex;align-items:center;gap:.3rem;background:rgba(0,87,255,.18);
+  border:1px solid rgba(0,87,255,.3);border-radius:.5rem;padding:.22rem .65rem;
+  font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;
+  color:#80aaff;margin:.25rem .15rem}
+.uni-badge{display:inline-flex;align-items:center;gap:.45rem;background:rgba(255,215,0,.10);
+  border:1px solid rgba(255,215,0,.28);border-radius:.75rem;padding:.5rem 1rem;
+  font-size:.82rem;font-weight:600;color:var(--gold);margin-top:1rem}
+.social-btn{display:inline-flex;align-items:center;gap:.4rem;padding:.45rem 1rem;border-radius:.65rem;
+  font-size:.78rem;font-weight:600;border:1px solid var(--border2);color:var(--dim);
+  background:var(--glass);margin:.2rem;transition:border-color .2s,color .2s}
+.social-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.orb{position:absolute;border-radius:50%;filter:blur(60px);pointer-events:none}
+.star-bg{position:absolute;width:3px;height:3px;background:#fff;border-radius:50%;opacity:.3;animation:twinkle 3s ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:.7;transform:scale(1.2)}}
+.number-ring{position:absolute;top:-1.5rem;right:-1.5rem;width:5rem;height:5rem;border-radius:50%;
+  background:linear-gradient(135deg,var(--cyan),var(--blue));
+  display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;
+  font-size:1.8rem;color:#000;opacity:.15}
+</style>
+</head>
+<body>
+<div id="app-nav"></div>
+<main class="page container">
+
+<!-- HERO -->
+<div style="text-align:center;margin-bottom:3rem;position:relative">
+  <!-- Background orbs -->
+  <div class="orb" style="width:300px;height:300px;background:rgba(0,87,255,.12);top:-100px;left:10%;z-index:-1"></div>
+  <div class="orb" style="width:250px;height:250px;background:rgba(0,212,255,.09);top:-50px;right:8%;z-index:-1"></div>
+
+  <div class="eyebrow" style="margin-bottom:1.2rem;justify-content:center">
+    <i class="bi bi-people-fill"></i> Tim Pengembang
+  </div>
+  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.8rem,7vw,5.5rem);line-height:.95;margin-bottom:1rem">
+    Meet the <span class="grad-cyan">Authors</span>
+  </h1>
+  <p style="color:var(--dim);font-size:1rem;max-width:50ch;margin:0 auto 1.25rem">
+    Tim mahasiswa Pendidikan Teknologi Informasi yang membangun FIFA World Cup 2026 Prediction Hub sebagai proyek Hackton Kuliah Web.
+  </p>
+  <div style="display:inline-flex;align-items:center;gap:.65rem;background:rgba(255,215,0,.10);border:1px solid rgba(255,215,0,.28);border-radius:.85rem;padding:.65rem 1.25rem">
+    <img src="css/img3.png"
+      alt="UIN Ar-Raniry" style="width:2.2rem;height:2.2rem;border-radius:.4rem;object-fit:contain;background:#fff;padding:2px"
+>
+    <div style="text-align:left">
+      <div style="font-size:.7rem;color:var(--mute);text-transform:uppercase;letter-spacing:.07em">Universitas</div>
+      <div style="font-weight:700;color:var(--gold);font-size:.88rem">UIN Ar-Raniry Banda Aceh</div>
+    </div>
+  </div>
+</div>
+
+<!-- AUTHOR CARDS -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.5rem;margin-bottom:3rem">
+
+  <!-- AUTHOR 1: Imam -->
+  <div class="card author-card">
+    <div class="number-ring">1</div>
+    <!-- Stars -->
+    <div class="star-bg" style="top:15%;left:12%;animation-delay:.5s"></div>
+    <div class="star-bg" style="top:25%;right:18%;animation-delay:1.2s"></div>
+    <div class="star-bg" style="bottom:20%;left:20%;animation-delay:2s"></div>
+
+    <div class="author-avatar" style="background:linear-gradient(135deg,rgba(0,212,255,.15),rgba(0,87,255,.10))">
+      <i class="bi bi-person-fill" style="font-size:2.8rem;color:var(--cyan)"></i>
+    </div>
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;margin-bottom:.3rem">T. Imam Mujahit Fillah</h2>
+    <div style="display:inline-flex;align-items:center;gap:.35rem;color:var(--cyan);font-size:.82rem;font-weight:600;margin-bottom:.85rem">
+      <i class="bi bi-star-fill" style="color:var(--gold)"></i> Lead Developer
+    </div>
+    <p style="font-size:.85rem;color:var(--dim);line-height:1.65;margin-bottom:1rem">
+      Bertanggung jawab atas arsitektur sistem, integrasi Firebase Firestore, dan logika scoring real-time. Spesialis front-end engineering dan system design.
+    </p>
+    <div style="margin-bottom:1rem">
+      <span class="skill-tag"><i class="bi bi-filetype-js"></i> JavaScript</span>
+      <span class="skill-tag"><i class="bi bi-database-fill"></i> Firebase</span>
+      <span class="skill-tag"><i class="bi bi-layout-wtf"></i> UI/UX</span>
+      <span class="skill-tag"><i class="bi bi-robot"></i> AI Integration</span>
+    </div>
+    <div class="uni-badge">
+      <i class="bi bi-mortarboard-fill"></i>
+      Pendidikan Teknologi Informasi - UIN Ar-Raniry
+    </div>
+  </div>
+
+  <!-- AUTHOR 2: Ridhatul -->
+  <div class="card author-card" style="border-color:rgba(255,215,0,.22)">
+    <div class="number-ring" style="background:linear-gradient(135deg,var(--gold),#ff9900)">2</div>
+    <div class="star-bg" style="top:10%;left:18%;animation-delay:.8s"></div>
+    <div class="star-bg" style="top:30%;right:12%;animation-delay:1.6s"></div>
+    <div class="star-bg" style="bottom:15%;right:22%;animation-delay:.3s"></div>
+
+    <div class="author-avatar" style="background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,150,0,.10));border-color:rgba(255,215,0,.4);box-shadow:0 0 30px rgba(255,215,0,.22),0 0 60px rgba(255,215,0,.08)">
+      <i class="bi bi-person-fill" style="font-size:2.8rem;color:var(--gold)"></i>
+    </div>
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;margin-bottom:.3rem">Ridhatul Jannati</h2>
+    <div style="display:inline-flex;align-items:center;gap:.35rem;color:var(--gold);font-size:.82rem;font-weight:600;margin-bottom:.85rem">
+      <i class="bi bi-star-fill" style="color:var(--gold)"></i> UI/UX Designer & Front-end
+    </div>
+    <p style="font-size:.85rem;color:var(--dim);line-height:1.65;margin-bottom:1rem">
+      Merancang visual identity, design system glassmorphism, dan komponen antarmuka. Memastikan pengalaman pengguna yang smooth di semua perangkat.
+    </p>
+    <div style="margin-bottom:1rem">
+      <span class="skill-tag" style="background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.25);color:var(--gold)"><i class="bi bi-palette-fill"></i> Design System</span>
+      <span class="skill-tag" style="background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.25);color:var(--gold)"><i class="bi bi-filetype-css"></i> CSS/Tailwind</span>
+      <span class="skill-tag" style="background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.25);color:var(--gold)"><i class="bi bi-phone-fill"></i> Responsive</span>
+      <span class="skill-tag" style="background:rgba(255,215,0,.12);border-color:rgba(255,215,0,.25);color:var(--gold)"><i class="bi bi-eye-fill"></i> Accessibility</span>
+    </div>
+    <div class="uni-badge">
+      <i class="bi bi-mortarboard-fill"></i>
+      Pendidikan Teknologi Informasi - UIN Ar-Raniry
+    </div>
+  </div>
+
+  <!-- AUTHOR 3: Rehan -->
+  <div class="card author-card" style="border-color:rgba(139,92,246,.22)">
+    <div class="number-ring" style="background:linear-gradient(135deg,#a78bfa,var(--purple))">3</div>
+    <div class="star-bg" style="top:20%;left:10%;animation-delay:1s"></div>
+    <div class="star-bg" style="top:15%;right:15%;animation-delay:.4s"></div>
+    <div class="star-bg" style="bottom:25%;left:15%;animation-delay:1.8s"></div>
+
+    <div class="author-avatar" style="background:linear-gradient(135deg,rgba(139,92,246,.15),rgba(79,70,229,.10));border-color:rgba(139,92,246,.4);box-shadow:0 0 30px rgba(139,92,246,.22),0 0 60px rgba(139,92,246,.08)">
+      <i class="bi bi-person-fill" style="font-size:2.8rem;color:#a78bfa"></i>
+    </div>
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.04em;margin-bottom:.3rem">Rehan Musfirah</h2>
+    <div style="display:inline-flex;align-items:center;gap:.35rem;color:#a78bfa;font-size:.82rem;font-weight:600;margin-bottom:.85rem">
+      <i class="bi bi-star-fill" style="color:var(--gold)"></i> Data & Backend Specialist
+    </div>
+    <p style="font-size:.85rem;color:var(--dim);line-height:1.65;margin-bottom:1rem">
+      Menangani struktur data Firebase, sistem penilaian, fitur export PDF/Excel, dan validasi data pertandingan WC 2026 yang akurat.
+    </p>
+    <div style="margin-bottom:1rem">
+      <span class="skill-tag" style="background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.25);color:#c4b5fd"><i class="bi bi-database-fill"></i> Firestore</span>
+      <span class="skill-tag" style="background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.25);color:#c4b5fd"><i class="bi bi-file-earmark-pdf-fill"></i> PDF/Excel</span>
+      <span class="skill-tag" style="background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.25);color:#c4b5fd"><i class="bi bi-graph-up"></i> Analytics</span>
+      <span class="skill-tag" style="background:rgba(139,92,246,.12);border-color:rgba(139,92,246,.25);color:#c4b5fd"><i class="bi bi-shield-check-fill"></i> Validation</span>
+    </div>
+    <div class="uni-badge">
+      <i class="bi bi-mortarboard-fill"></i>
+      Pendidikan Teknologi Informasi - UIN Ar-Raniry
+    </div>
+  </div>
+
+</div>
+
+<!-- PROJECT INFO -->
+<div class="card no-hover" style="padding:2rem;margin-bottom:2.5rem">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;align-items:center">
+    <div>
+      <h2 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;margin-bottom:.85rem"><i class="bi bi-trophy-fill" style="color:var(--gold)"></i> Tentang Proyek</h2>
+      <p style="color:var(--dim);font-size:.9rem;line-height:1.75;margin-bottom:1rem">
+        <strong style="color:var(--text)">FIFA World Cup 2026 Prediction Hub</strong> adalah aplikasi web prediksi sepak bola yang dibangun untuk mata kuliah Hackton Kuliah Web. Platform ini memungkinkan pengguna memprediksi skor pertandingan, mengisi bracket knockout, dan memilih juara Piala Dunia 2026.
+      </p>
+      <p style="color:var(--dim);font-size:.9rem;line-height:1.75">
+        Data real-time dari <strong style="color:var(--cyan)">Firebase Firestore</strong></strong> dan laporan ekspor dalam format PDF & Excel.
+      </p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem">
+      <div class="card no-hover" style="padding:1.1rem;text-align:center;border-color:rgba(0,212,255,.2)">
+        <i class="bi bi-file-code-fill" style="font-size:1.8rem;color:var(--cyan);display:block;margin-bottom:.4rem"></i>
+        <div style="font-family:'Space Grotesk',monospace;font-size:1.6rem;font-weight:700;color:var(--cyan)">11</div>
+        <div style="font-size:.72rem;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Halaman Web</div>
+      </div>
+      <div class="card no-hover" style="padding:1.1rem;text-align:center;border-color:rgba(255,215,0,.2)">
+        <i class="bi bi-people-fill" style="font-size:1.8rem;color:var(--gold);display:block;margin-bottom:.4rem"></i>
+        <div style="font-family:'Space Grotesk',monospace;font-size:1.6rem;font-weight:700;color:var(--gold)">48</div>
+        <div style="font-size:.72rem;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Tim WC 2026</div>
+      </div>
+      <div class="card no-hover" style="padding:1.1rem;text-align:center;border-color:rgba(0,255,136,.2)">
+        <i class="bi bi-database-fill" style="font-size:1.8rem;color:var(--green);display:block;margin-bottom:.4rem"></i>
+        <div style="font-family:'Space Grotesk',monospace;font-size:1.6rem;font-weight:700;color:var(--green)">Live</div>
+        <div style="font-size:.72rem;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Firebase Sync</div>
+      </div>
+      <div class="card no-hover" style="padding:1.1rem;text-align:center;border-color:rgba(139,92,246,.2)">
+        <i class="bi bi-robot" style="font-size:1.8rem;color:#a78bfa;display:block;margin-bottom:.4rem"></i>
+        <div style="font-family:'Space Grotesk',monospace;font-size:1.6rem;font-weight:700;color:#a78bfa">AI</div>
+        <div style="font-size:.72rem;color:var(--mute);text-transform:uppercase;letter-spacing:.06em">Local AI Powered</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TECH STACK -->
+<div style="text-align:center;margin-bottom:2rem">
+  <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;margin-bottom:1.1rem;color:var(--mute)">Tech Stack</h3>
+  <div style="display:flex;flex-wrap:wrap;gap:.65rem;justify-content:center">
+    <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--glass);border:1px solid var(--border2);border-radius:.65rem;padding:.45rem .9rem;font-size:.82rem;font-weight:600">
+      <i class="bi bi-filetype-html" style="color:#e34f26"></i> HTML5
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--glass);border:1px solid var(--border2);border-radius:.65rem;padding:.45rem .9rem;font-size:.82rem;font-weight:600">
+      <i class="bi bi-filetype-css" style="color:#1572b6"></i> CSS3
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--glass);border:1px solid var(--border2);border-radius:.65rem;padding:.45rem .9rem;font-size:.82rem;font-weight:600">
+      <i class="bi bi-filetype-js" style="color:#f7df1e"></i> JavaScript ES6+
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--glass);border:1px solid rgba(255,152,0,.3);border-radius:.65rem;padding:.45rem .9rem;font-size:.82rem;font-weight:600;color:#ffa500">
+      <i class="bi bi-fire"></i> Firebase Firestore
+    </span>
+    
+    <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--glass);border:1px solid rgba(0,212,255,.25);border-radius:.65rem;padding:.45rem .9rem;font-size:.82rem;font-weight:600;color:var(--cyan)">
+      <i class="bi bi-bootstrap-fill"></i> Bootstrap Icons
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--glass);border:1px solid rgba(255,215,0,.25);border-radius:.65rem;padding:.45rem .9rem;font-size:.82rem;font-weight:600;color:var(--gold)">
+      <i class="bi bi-file-earmark-pdf-fill"></i> jsPDF
+    </span>
+    <span style="display:inline-flex;align-items:center;gap:.4rem;background:var(--glass);border:1px solid rgba(0,255,136,.25);border-radius:.65rem;padding:.45rem .9rem;font-size:.82rem;font-weight:600;color:var(--green)">
+      <i class="bi bi-file-earmark-spreadsheet-fill"></i> SheetJS (Excel)
+    </span>
+  </div>
+</div>
+
+<!-- BACK HOME -->
+<div style="text-align:center;padding-bottom:1rem">
+  <a href="index.html" class="btn btn-cyan btn-lg"><i class="bi bi-house-fill"></i> Kembali ke Dashboard</a>
+</div>
+
+</main>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  renderNav('author.html');
+});
+</script>
+</body>
+</html>

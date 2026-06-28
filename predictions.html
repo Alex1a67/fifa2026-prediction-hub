@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Prediksi Skor - WC2026 Hub</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/data.js"></script>
+<script src="js/shared.js"></script>
+<style>
+/* ── Match prediction card (image-2 style) ───────────────────── */
+.pred-card{
+  background:rgba(4,13,40,.88);
+  border:1px solid rgba(0,87,255,.28);
+  border-radius:18px;
+  padding:1.35rem 1.4rem 1.2rem;
+  margin-bottom:1rem;
+  backdrop-filter:blur(18px);
+  transition:border-color .22s,box-shadow .22s;
+  position:relative;overflow:hidden;
+}
+.pred-card::before{
+  content:'';position:absolute;top:0;left:10%;right:10%;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,212,255,.22),transparent);
+}
+.pred-card:hover{border-color:rgba(0,212,255,.45);box-shadow:0 0 32px rgba(0,212,255,.09)}
+
+.pred-card-head{display:flex;align-items:center;gap:.55rem;flex-wrap:wrap;margin-bottom:1.1rem}
+
+.pred-teams{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.75rem;margin-bottom:1.15rem}
+.pred-team{display:flex;flex-direction:column;align-items:center;gap:.45rem;text-align:center}
+.pred-team-flag{width:56px;height:56px;border-radius:50%;object-fit:cover;
+  border:2px solid var(--border);box-shadow:0 0 18px rgba(0,0,0,.4);background:rgba(255,255,255,.08)}
+.pred-team-name{font-weight:700;font-size:.9rem;line-height:1.2}
+.pred-team-rank{font-size:.69rem;color:var(--mute)}
+
+.vs-badge{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--mute);
+  padding:.3rem .55rem;background:rgba(255,255,255,.06);border-radius:.5rem;
+  border:1px solid var(--border2);flex-shrink:0}
+
+.score-row{display:flex;align-items:center;justify-content:center;gap:.9rem;margin-bottom:.9rem}
+.score-team-lbl{font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;color:var(--mute);font-weight:600;text-align:center;margin-bottom:.28rem}
+.score-col{text-align:center}
+.score-dash{font-size:1.6rem;font-weight:700;color:var(--mute);margin-top:1.3rem}
+
+.score-input{
+  width:3.6rem;height:3.6rem;text-align:center;
+  font-family:'Space Grotesk',monospace;font-size:1.4rem;font-weight:700;
+  background:rgba(2,10,28,.85);border:2px solid var(--border2);
+  border-radius:.8rem;color:var(--text);
+  appearance:textfield;-moz-appearance:textfield;
+  transition:border-color .18s,box-shadow .18s;
+}
+.score-input::-webkit-inner-spin-button{appearance:none}
+.score-input:focus{border-color:var(--cyan);box-shadow:0 0 0 3px rgba(0,212,255,.2);outline:none}
+
+.pred-saved-badge{
+  display:inline-flex;align-items:center;gap:.35rem;
+  font-size:.72rem;font-weight:700;padding:.22rem .7rem;
+  border-radius:999px;background:rgba(0,255,136,.14);
+  color:var(--green);border:1px solid rgba(0,255,136,.28);
+  margin-left:auto;flex-shrink:0;
+}
+
+.save-pred-btn{
+  width:100%;padding:.72rem;border-radius:.9rem;
+  background:linear-gradient(120deg,var(--cyan),var(--blue));
+  color:#000;font-weight:700;font-size:.9rem;
+  border:none;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;gap:.45rem;
+  transition:box-shadow .2s,transform .18s,opacity .2s;
+  box-shadow:0 0 22px rgba(0,212,255,.35);
+}
+.save-pred-btn:hover{box-shadow:0 0 38px rgba(0,212,255,.60);transform:translateY(-2px)}
+.save-pred-btn:active{transform:scale(.97)}
+.save-pred-btn:disabled{opacity:.38;pointer-events:none}
+
+.tbd-card{
+  background:rgba(4,13,40,.55);border:1px solid rgba(255,255,255,.07);
+  border-radius:16px;padding:1.1rem 1.25rem;margin-bottom:.75rem;opacity:.62;
+}
+
+/* Search bar styling */
+.search-wrap{position:relative}
+.search-wrap input{padding-right:2.8rem}
+.search-wrap .search-btn{
+  position:absolute;right:.4rem;top:50%;transform:translateY(-50%);
+  background:linear-gradient(120deg,var(--cyan),var(--blue));
+  border:none;border-radius:.55rem;width:2rem;height:2rem;
+  display:flex;align-items:center;justify-content:center;
+  color:#000;cursor:pointer;font-size:.85rem;
+}
+</style>
+</head>
+<body>
+<div id="app-nav"></div>
+<main class="page container">
+
+<div style="margin-bottom:1.5rem">
+  <div class="eyebrow"><i class="bi bi-bullseye"></i> Score Predictions</div>
+  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.4rem,6vw,4.2rem);margin-bottom:.4rem">
+    <span class="grad-cyan">Match</span> Predictions
+  </h1>
+  <p style="color:var(--dim);font-size:.95rem;max-width:52ch">
+    Prediksikan skor akhir untuk setiap pertandingan.
+    <strong style="color:var(--cyan)">Score tepat = +15 pts</strong> ·
+    <strong style="color:var(--green)">Tebakan Benar = +5 pts</strong>
+  </p>
+</div>
+
+<!-- Filter bar -->
+<div class="card no-hover" style="padding:1.1rem 1.25rem;margin-bottom:1.25rem;border-color:rgba(0,212,255,.25)">
+  <div style="display:flex;align-items:flex-end;gap:1rem;flex-wrap:wrap">
+    <div style="flex:1;min-width:180px">
+      <label class="label" for="uname"><i class="bi bi-person-fill"></i> Nama penebak</label>
+      <input type="text" id="uname" class="input" placeholder="Enter your name…" maxlength="30" autocomplete="nickname"/>
+      <span id="name-err" class="err-msg"></span>
+    </div>
+    <div style="flex:1;min-width:155px">
+      <label class="label" for="round-sel"><i class="bi bi-diagram-3-fill"></i> Ronde Turnamen </label>
+      <select id="round-sel" class="input">
+        <option value="R32">⭐ Babak 32 Besar</option>
+        <option value="R16">Babak 16 Besar</option>
+        <option value="QF">Perempat Final</option>
+        <option value="SF">Semi Final</option>
+        <option value="F">Final</option>
+      </select>
+    </div>
+    <div style="flex:1;min-width:170px">
+      <label class="label" for="search-match"><i class="bi bi-search"></i> Pencarian Team</label>
+      <div class="search-wrap">
+        <input type="search" id="search-match" class="input" placeholder="e.g. Brazil, Spain…"/>
+        <button class="search-btn" onclick="renderFixtures()"><i class="bi bi-search"></i></button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Point badges -->
+<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.65rem">
+  <span class="badge badge-cyan"><i class="bi bi-bullseye"></i> +15 Exact Score</span>
+  <span class="badge badge-green"><i class="bi bi-check-circle-fill"></i> +5 Correct Winner</span>
+  <span class="badge badge-gold"><i class="bi bi-trophy-fill"></i> +50 Correct Champion</span>
+</div>
+
+<div id="fixtures">
+  <div class="skel" style="height:10rem;margin-bottom:1rem;border-radius:18px"></div>
+  <div class="skel" style="height:10rem;margin-bottom:1rem;border-radius:18px"></div>
+  <div class="skel" style="height:10rem;border-radius:18px"></div>
+</div>
+</main>
+
+<script>
+let myPreds={}, currentRound='R32', searchQ='', unsubPreds=null;
+function currentName(){return document.getElementById('uname')?.value.trim()||'';}
+
+function renderFixtures(){
+  searchQ=(document.getElementById('search-match')?.value||'').toLowerCase().trim();
+  currentRound=document.getElementById('round-sel')?.value||'R32';
+  let matches=getMatchesByRound(currentRound);
+  if(searchQ){
+    matches=matches.filter(m=>{
+      const an=teamName(m.teamA).toLowerCase(), bn=teamName(m.teamB).toLowerCase();
+      return an.includes(searchQ)||bn.includes(searchQ)||m.id.toLowerCase().includes(searchQ);
+    });
+  }
+  const el=document.getElementById('fixtures');
+  if(!matches.length){
+    el.innerHTML=`<div class="empty"><div class="empty-icon"><i class="bi bi-search"></i></div><p style="color:var(--dim)">Tidak ada pertandingan ditemukan.</p></div>`;
+    return;
+  }
+  el.innerHTML=matches.map(m=>matchCard(m)).join('');
+  el.querySelectorAll('.pred-form').forEach(f=>f.addEventListener('submit',submitPred));
+  el.querySelectorAll('.score-input').forEach(b=>b.addEventListener('input',()=>{
+    b.value=b.value.replace(/\D/g,'').slice(0,2);
+  }));
+}
+
+function matchCard(m){
+  const existing=myPreds[m.id];
+  const isTBD=m.teamA==='TBD'||m.teamB==='TBD';
+  const aName=teamName(m.teamA); const bName=teamName(m.teamB);
+  const aFlagUrl=flagUrl(m.teamA,80); const bFlagUrl=flagUrl(m.teamB,80);
+  const roundLabel=ROUND_LABELS[currentRound]||currentRound;
+
+  if(isTBD) return `
+    <div class="tbd-card">
+      <div class="pred-card-head">
+        <span class="badge badge-blue"><i class="bi bi-diagram-3-fill"></i> ${roundLabel}</span>
+        <span class="badge badge-mute"><i class="bi bi-hourglass-split"></i> Awaiting Group Stage</span>
+        <span style="font-size:.72rem;color:var(--mute);margin-left:auto">${m.id}</span>
+      </div>
+      <p style="text-align:center;color:var(--mute);font-size:.83rem;padding:.5rem 0">
+        Teams will be confirmed after group stage ends (27 June 2026).
+      </p>
+    </div>`;
+
+  return `
+    <div class="pred-card">
+      <div class="pred-card-head">
+        <span class="badge badge-blue"><i class="bi bi-diagram-3-fill"></i> ${roundLabel}</span>
+        <span style="font-size:.73rem;color:var(--mute);font-weight:600">${_esc(m.id)}</span>
+        ${m.venue?`<span style="font-size:.73rem;color:var(--mute)"><i class="bi bi-geo-alt-fill"></i> ${_esc(m.venue)}</span>`:''}
+        ${m.date?`<span style="font-size:.73rem;color:var(--mute)"><i class="bi bi-calendar3"></i> ${m.date}</span>`:''}
+        ${existing?`<div class="pred-saved-badge"><i class="bi bi-check-circle-fill"></i> ${existing.predScoreA}–${existing.predScoreB}</div>`:''}
+      </div>
+
+      <div class="pred-teams">
+        <div class="pred-team">
+          ${aFlagUrl?`<img src="${aFlagUrl}" class="pred-team-flag" alt="${_esc(aName)}">`:`<div class="pred-team-flag" style="border:1px dashed var(--border2)"></div>`}
+          <div class="pred-team-name">${_esc(aName)}</div>
+          ${WC_TEAMS[m.teamA]?`<div class="pred-team-rank">FIFA #${WC_TEAMS[m.teamA].rank}</div>`:''}
+        </div>
+        <div class="vs-badge">VS</div>
+        <div class="pred-team">
+          ${bFlagUrl?`<img src="${bFlagUrl}" class="pred-team-flag" alt="${_esc(bName)}">`:`<div class="pred-team-flag" style="border:1px dashed var(--border2)"></div>`}
+          <div class="pred-team-name">${_esc(bName)}</div>
+          ${WC_TEAMS[m.teamB]?`<div class="pred-team-rank">FIFA #${WC_TEAMS[m.teamB].rank}</div>`:''}
+        </div>
+      </div>
+
+      <form class="pred-form" data-match="${m.id}" data-ta="${m.teamA}" data-tb="${m.teamB}" novalidate>
+        <div class="score-row">
+          <div class="score-col">
+            <div class="score-team-lbl">${_esc(aName)}</div>
+            <input type="number" class="score-input" name="sa" min="0" max="99" placeholder="0"
+              value="${existing?.predScoreA??''}" required>
+          </div>
+          <div class="score-dash">–</div>
+          <div class="score-col">
+            <div class="score-team-lbl">${_esc(bName)}</div>
+            <input type="number" class="score-input" name="sb" min="0" max="99" placeholder="0"
+              value="${existing?.predScoreB??''}" required>
+          </div>
+        </div>
+        <span class="err-msg" id="ferr-${m.id}" style="display:block;text-align:center;margin-bottom:.55rem"></span>
+        <button type="submit" class="save-pred-btn">
+          <i class="bi bi-${existing?'pencil-fill':'save-fill'}"></i>
+          ${existing?'Update Prediction':'Simpan Tebakan'}
+        </button>
+      </form>
+    </div>`;
+}
+
+async function submitPred(e){
+  e.preventDefault();
+  const form=e.currentTarget, matchId=form.dataset.match, teamA=form.dataset.ta, teamB=form.dataset.tb;
+  const errEl=document.getElementById(`ferr-${matchId}`);
+  const btn=form.querySelector('button[type="submit"]');
+  const nameRaw=currentName(), nameErrEl=document.getElementById('name-err');
+  const vn=validateName(nameRaw);
+  if(!vn.ok){nameErrEl.textContent=vn.msg;nameErrEl.style.display='block';document.getElementById('uname').focus();return;}
+  nameErrEl.style.display='none'; saveName(vn.val);
+  const sa=parseInt(form.elements['sa'].value,10), sb=parseInt(form.elements['sb'].value,10);
+  if(isNaN(sa)||isNaN(sb)||sa<0||sb<0||sa>99||sb>99){
+    errEl.textContent='Enter valid scores (0–99) for both teams.';errEl.style.display='block';return;
+  }
+  errEl.style.display='none';
+  btn.disabled=true; btn.innerHTML='<i class="bi bi-hourglass-split"></i> Saving…';
+  try{
+    await db.collection('predictions').doc(`${slug(vn.val)}_${matchId}`).set({
+      userName:vn.val, matchId, teamA, teamB, predScoreA:sa, predScoreB:sb,
+      savedAt:firebase.firestore.FieldValue.serverTimestamp()
+    });
+    myPreds[matchId]={predScoreA:sa,predScoreB:sb};
+    toast(`<i class="bi bi-check-circle-fill"></i> Saved! ${teamName(teamA)} ${sa}–${sb} ${teamName(teamB)}`,'ok');
+    confetti(1800); renderFixtures();
+  }catch(err){
+    const msg=err.code==='permission-denied'?'Set Firestore Rules to allow read, write: if true':err.message;
+    toast('Failed: '+msg,'err',6000);
+    btn.disabled=false; btn.innerHTML='<i class="bi bi-save-fill"></i> Simpan Tebakan';
+  }
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  renderNav('predictions.html');
+  const savedName=getSavedName();
+  if(savedName) document.getElementById('uname').value=savedName;
+
+  function subscribePreds(name){
+    if(unsubPreds) unsubPreds();
+    if(!name) return;
+    unsubPreds=db.collection('predictions').where('userName','==',name).onSnapshot(snap=>{
+      myPreds={};
+      snap.forEach(d=>{const data=d.data();myPreds[data.matchId]={predScoreA:data.predScoreA,predScoreB:data.predScoreB};});
+      renderFixtures();
+    },()=>renderFixtures());
+  }
+
+  document.getElementById('uname').addEventListener('change',e=>{
+    saveName(e.target.value); subscribePreds(e.target.value.trim());
+  });
+  document.getElementById('round-sel').addEventListener('change',renderFixtures);
+  document.getElementById('search-match').addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();renderFixtures();}
+  });
+
+  subscribePreds(savedName);
+  if(!savedName) renderFixtures();
+});
+</script>
+</body>
+</html>

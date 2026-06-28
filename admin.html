@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Admin Panel - WC2026 Hub</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/data.js"></script><script src="js/shared.js"></script><script src="js/reports.js"></script>
+<style>
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:none;align-items:center;justify-content:center;padding:1rem}
+.modal-bg.open{display:flex}
+.modal{background:#080f2a;border:1px solid rgba(0,212,255,.3);border-radius:18px;padding:1.75rem;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;box-shadow:0 30px 80px rgba(0,0,0,.8)}
+.tbl{width:100%;border-collapse:collapse;font-size:.84rem}
+.tbl th{background:rgba(0,87,255,.25);color:var(--cyan);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;padding:.55rem .85rem;text-align:left}
+.tbl td{padding:.62rem .85rem;border-bottom:1px solid rgba(255,255,255,.05);vertical-align:middle}
+.tbl tr:hover td{background:rgba(0,212,255,.05)}
+.tag-ok{color:var(--green);font-weight:700}.tag-no{color:var(--red)}
+</style>
+</head><body>
+<div id="app-nav"></div>
+<div class="modal-bg" id="crud-modal">
+  <div class="modal">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <h3 id="modal-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem"></h3>
+      <button onclick="closeModal()" class="btn btn-ghost btn-sm"><i class="bi bi-x-lg"></i> Tutup</button>
+    </div>
+    <div id="modal-body"></div>
+    <div style="display:flex;gap:.65rem;margin-top:1.25rem">
+      <button id="modal-save" class="btn btn-cyan" style="flex:1"><i class="bi bi-save-fill"></i> Simpan</button>
+      <button onclick="closeModal()" class="btn btn-ghost btn-sm"><i class="bi bi-x-lg"></i></button>
+    </div>
+  </div>
+</div>
+<main class="page container">
+<div style="margin-bottom:1.75rem">
+  <div class="eyebrow"><i class="bi bi-gear-fill"></i> Administrator</div>
+  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2rem,5vw,3.5rem)">Admin <span class="grad-cyan">Panel</span></h1>
+  <p style="color:var(--dim);font-size:.88rem">CRUD lengkap · Real-time Firebase · Import/Export PDF & Excel</p>
+</div>
+
+<!-- GATE -->
+<div id="gate" class="card no-hover" style="max-width:440px;padding:2.2rem;text-align:center">
+  <i class="bi bi-shield-lock-fill" style="font-size:2.5rem;color:var(--cyan);display:block;margin-bottom:.75rem"></i>
+  <h2 style="font-family:'Bebas Neue',sans-serif;font-size:2rem;margin-bottom:.5rem">Admin Access</h2>
+  <div class="card no-hover" style="padding:.85rem;margin-bottom:1.25rem;border-color:rgba(255,215,0,.3);text-align:left">
+    <p style="font-size:.8rem;color:var(--gold);font-weight:700"><i class="bi bi-key-fill"></i> Default Passphrase:</p>
+    <p style="font-family:monospace;font-size:1.5rem;letter-spacing:.15em;color:var(--text);margin:.2rem 0">admin2026</p>
+    <p style="font-size:.72rem;color:var(--mute)">Ubah ADMIN_PASS di admin.html sebelum deploy publik.</p>
+  </div>
+  <div class="field">
+    <input type="password" id="pass-in" class="input" placeholder="Masukkan passphrase…" style="text-align:center;letter-spacing:.15em;font-size:1.1rem"/>
+    <span id="pass-err" class="err-msg" style="text-align:center"></span>
+  </div>
+  <button id="unlock-btn" class="btn btn-cyan btn-block btn-lg" style="margin-top:.5rem"><i class="bi bi-unlock-fill"></i> Buka Panel Admin</button>
+</div>
+
+<!-- PANEL -->
+<div id="panel" style="display:none">
+  <div class="fb-status" id="fb-status-bar">
+    <div id="fb-dot" style="width:.9rem;height:.9rem;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:blink 1.5s infinite;flex-shrink:0"></div>
+    <div><div style="font-weight:700;color:var(--green)"><i class="bi bi-wifi"></i> Firebase Terhubung</div>
+    <div style="font-size:.78rem;color:var(--dim)">Project: <strong>fifa2026-prediction-hub</strong> · Real-time sync aktif</div></div>
+    <div style="margin-left:auto;font-size:.78rem;color:var(--mute);text-align:right">
+      <a href="https://console.firebase.google.com/project/fifa2026-prediction-hub/firestore/rules" target="_blank" style="color:var(--cyan)"><i class="bi bi-box-arrow-up-right"></i> Firestore Rules</a>
+    </div>
+  </div>
+  <div class="tabs" style="margin-bottom:1.5rem;flex-wrap:wrap">
+    <button class="tab on" data-tab="tab-dashboard"><i class="bi bi-speedometer2"></i> Dashboard</button>
+    <button class="tab" data-tab="tab-preds"><i class="bi bi-bullseye"></i> Prediksi</button>
+    <button class="tab" data-tab="tab-champs"><i class="bi bi-trophy-fill"></i> Juara</button>
+    <button class="tab" data-tab="tab-matches"><i class="bi bi-flag-fill"></i> Tim Match</button>
+    <button class="tab" data-tab="tab-results"><i class="bi bi-check-square-fill"></i> Hasil</button>
+    <button class="tab" data-tab="tab-recalc"><i class="bi bi-arrow-repeat"></i> Hitung Skor</button>
+    <button class="tab" data-tab="tab-import"><i class="bi bi-upload"></i> Import</button>
+    <button class="tab" data-tab="tab-export"><i class="bi bi-download"></i> Export</button>
+    <button class="tab" data-tab="tab-settings"><i class="bi bi-gear-fill"></i> Setting</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard" class="tab-panel">
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:1rem"><i class="bi bi-database-fill" style="color:var(--cyan)"></i> Statistik Real-time Firebase</h3>
+    <div class="grid-4" style="margin-bottom:2rem">
+      <div class="card no-hover" style="padding:1.2rem;text-align:center"><i class="bi bi-bullseye" style="font-size:1.5rem;color:var(--cyan);display:block;margin-bottom:.4rem"></i><div class="stat-val mono grad-cyan" id="db-preds">…</div><div class="stat-lbl">Prediksi</div></div>
+      <div class="card no-hover" style="padding:1.2rem;text-align:center"><i class="bi bi-trophy-fill" style="font-size:1.5rem;color:var(--gold);display:block;margin-bottom:.4rem"></i><div class="stat-val mono" id="db-champs" style="color:var(--gold)">…</div><div class="stat-lbl">Prediksi Juara</div></div>
+      <div class="card no-hover" style="padding:1.2rem;text-align:center"><i class="bi bi-check-square-fill" style="font-size:1.5rem;color:var(--green);display:block;margin-bottom:.4rem"></i><div class="stat-val mono" id="db-results" style="color:var(--green)">…</div><div class="stat-lbl">Hasil Resmi</div></div>
+      <div class="card no-hover" style="padding:1.2rem;text-align:center"><i class="bi bi-bar-chart-fill" style="font-size:1.5rem;color:var(--purple);display:block;margin-bottom:.4rem"></i><div class="stat-val mono" id="db-lb" style="color:var(--purple)">…</div><div class="stat-lbl">Leaderboard</div></div>
+    </div>
+    <div class="card no-hover" style="padding:1.25rem"><h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.2rem;margin-bottom:.85rem"><i class="bi bi-activity"></i> Aktivitas Terbaru</h4><div id="recent-activity"><div class="skel" style="height:2.5rem;margin-bottom:.5rem;border-radius:.7rem"></div><div class="skel" style="height:2.5rem;border-radius:.7rem"></div></div></div>
+  </div>
+
+  <!-- PREDICTIONS CRUD -->
+  <div id="tab-preds" class="tab-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem"><i class="bi bi-bullseye"></i> Manajemen Prediksi</h3>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <input type="search" id="pred-search" class="input" placeholder="Cari nama…" style="width:180px"/>
+        <button onclick="searchPreds()" class="btn btn-cyan btn-sm"><i class="bi bi-search"></i></button>
+        <button onclick="openAddPred()" class="btn btn-green btn-sm"><i class="bi bi-plus-circle-fill"></i> Tambah</button>
+      </div>
+    </div>
+    <div class="card no-hover" style="padding:1rem;overflow-x:auto">
+      <table class="tbl" id="preds-tbl">
+        <thead><tr><th>Nama</th><th>Match</th><th>Tim A</th><th>Prediksi</th><th>Tim B</th><th>Disimpan</th><th>Aksi</th></tr></thead>
+        <tbody id="preds-body"><tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--mute)"><i class="bi bi-hourglass-split"></i> Memuat…</td></tr></tbody>
+      </table>
+    </div>
+    <div id="preds-count" style="font-size:.8rem;color:var(--mute);margin-top:.65rem"></div>
+  </div>
+
+  <!-- CHAMPION PICKS CRUD -->
+  <div id="tab-champs" class="tab-panel" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;margin-bottom:1rem">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem"><i class="bi bi-trophy-fill"></i> Manajemen Prediksi Juara</h3>
+      <button onclick="openAddChamp()" class="btn btn-green btn-sm"><i class="bi bi-plus-circle-fill"></i> Tambah</button>
+    </div>
+    <div class="card no-hover" style="padding:1rem;overflow-x:auto">
+      <table class="tbl" id="champs-tbl">
+        <thead><tr><th>Nama Peserta</th><th>Pilihan Juara</th><th>Benar?</th><th>Disimpan</th><th>Aksi</th></tr></thead>
+        <tbody id="champs-body"><tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--mute)"><i class="bi bi-hourglass-split"></i> Memuat…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MATCH TEAMS -->
+  <div id="tab-matches" class="tab-panel" style="display:none">
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:.5rem"><i class="bi bi-flag-fill"></i> Atur Tim Setiap Match</h3>
+    <p style="color:var(--dim);font-size:.85rem;margin-bottom:1rem">Set tim setelah babak grup selesai (27 Juni). Ini membuka slot prediksi untuk pertandingan tersebut.</p>
+    <div style="margin-bottom:1rem"><label class="label">Pilih Babak</label>
+    <select id="match-round-sel" class="input" style="max-width:300px" onchange="renderMatchTeamsForm(this.value)">
+      <option value="R16">Babak 16 Besar</option><option value="R32">Round of 32</option>
+      <option value="QF">Perempat Final</option><option value="SF">Semi Final</option><option value="F">Final</option>
+    </select></div>
+    <div id="match-teams-form"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="tab-results" class="tab-panel" style="display:none">
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:.5rem"><i class="bi bi-check-square-fill"></i> Input Hasil Resmi</h3>
+    <p style="color:var(--dim);font-size:.85rem;margin-bottom:1rem">Input skor setelah pertandingan. Lalu klik tab Hitung Skor.</p>
+    <div style="margin-bottom:1rem"><label class="label">Pilih Babak</label>
+    <select id="res-round-sel" class="input" style="max-width:300px" onchange="renderResultsForm(this.value)">
+      <option value="R16">Babak 16 Besar</option><option value="R32">Round of 32</option>
+      <option value="QF">Perempat Final</option><option value="SF">Semi Final</option><option value="F">Final</option>
+    </select></div>
+    <div id="results-form"></div>
+  </div>
+
+  <!-- RECALCULATE -->
+  <div id="tab-recalc" class="tab-panel" style="display:none">
+    <div class="card no-hover" style="padding:2rem;max-width:600px">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.6rem;margin-bottom:.75rem"><i class="bi bi-arrow-repeat" style="color:var(--cyan)"></i> Hitung Ulang Semua Skor</h3>
+      <p style="color:var(--dim);font-size:.88rem;line-height:1.65;margin-bottom:1.5rem">Membaca semua prediksi dari Firebase, mencocokkan dengan hasil resmi, update leaderboard. Jalankan setelah setiap pertandingan selesai.</p>
+      <div style="display:flex;gap:.65rem;flex-wrap:wrap;margin-bottom:1.5rem">
+        <div class="card no-hover" style="padding:.75rem 1rem;flex:1;min-width:90px;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:var(--cyan);font-family:'Space Grotesk',monospace">+15</div><div style="font-size:.68rem;color:var(--mute);text-transform:uppercase">Skor Tepat</div></div>
+        <div class="card no-hover" style="padding:.75rem 1rem;flex:1;min-width:90px;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:var(--green);font-family:'Space Grotesk',monospace">+5</div><div style="font-size:.68rem;color:var(--mute);text-transform:uppercase">Pemenang / Bracket</div></div>
+        <div class="card no-hover" style="padding:.75rem 1rem;flex:1;min-width:90px;text-align:center"><div style="font-size:1.5rem;font-weight:700;color:var(--gold);font-family:'Space Grotesk',monospace">+50</div><div style="font-size:.68rem;color:var(--mute);text-transform:uppercase">Juara Tepat</div></div>
+      </div>
+      <button id="recalc-btn" class="btn btn-cyan btn-block btn-lg" style="margin-bottom:1.5rem"><i class="bi bi-arrow-repeat"></i> Hitung &amp; Update Leaderboard</button>
+      <div id="recalc-log" style="font-size:.84rem;color:var(--dim)"></div>
+    </div>
+  </div>
+
+  <!-- IMPORT -->
+  <div id="tab-import" class="tab-panel" style="display:none">
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:.5rem"><i class="bi bi-upload"></i> Import Data ke Firebase</h3>
+    <p style="color:var(--dim);font-size:.85rem;margin-bottom:1.5rem">Upload CSV atau Excel. Data langsung masuk ke Firestore real-time.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="card no-hover" style="padding:1.5rem">
+        <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;margin-bottom:.65rem;color:var(--green)"><i class="bi bi-file-earmark-text-fill"></i> Import CSV</h4>
+        <p style="font-size:.83rem;color:var(--dim);margin-bottom:.85rem">Kolom: <code style="background:var(--glass);padding:.1rem .4rem;border-radius:.3rem;font-size:.78rem;color:var(--cyan)">userName, matchId, teamA, teamB, predScoreA, predScoreB</code></p>
+        <button onclick="downloadCSVTemplate()" class="btn btn-ghost btn-sm" style="margin-bottom:.85rem;width:100%"><i class="bi bi-download"></i> Download Template CSV</button>
+        <label class="label">Pilih File CSV</label>
+        <input type="file" id="csv-file" accept=".csv" class="input" style="padding:.5rem"/>
+        <button onclick="handleCSVImport()" class="btn btn-green btn-block" style="margin-top:.75rem"><i class="bi bi-upload"></i> Import CSV ke Firebase</button>
+      </div>
+      <div class="card no-hover" style="padding:1.5rem">
+        <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.3rem;margin-bottom:.65rem;color:var(--cyan)"><i class="bi bi-file-earmark-excel-fill"></i> Import Excel (.xlsx)</h4>
+        <p style="font-size:.83rem;color:var(--dim);margin-bottom:.85rem">Sheet pertama dibaca. Kolom sama dengan format CSV.</p>
+        <div style="height:2.8rem;margin-bottom:.85rem"></div>
+        <label class="label">Pilih File Excel</label>
+        <input type="file" id="xlsx-file" accept=".xlsx,.xls" class="input" style="padding:.5rem"/>
+        <button onclick="handleXLSXImport()" class="btn btn-cyan btn-block" style="margin-top:.75rem"><i class="bi bi-upload"></i> Import Excel ke Firebase</button>
+      </div>
+    </div>
+    <div class="card no-hover" style="padding:1rem;margin-top:1rem;border-color:rgba(255,215,0,.25)">
+      <p style="font-size:.83rem;color:var(--gold);font-weight:700;margin-bottom:.4rem"><i class="bi bi-exclamation-triangle-fill"></i> Catatan Import</p>
+      <ul style="font-size:.82rem;color:var(--dim);padding-left:1.2rem;line-height:1.8">
+        <li>Data dengan userName + matchId sama akan <strong style="color:var(--cyan)">diperbarui</strong>, tidak diduplikat</li>
+        <li>TeamA/B gunakan kode: BRA, ARG, ESP, FRA, ENG, dll.</li>
+        <li>MatchId format: R16-1, R32-3, QF-1, SF-1, F-1</li>
+        <li>Setelah import, klik <strong style="color:var(--cyan)">Hitung Skor</strong> untuk update leaderboard</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div id="tab-export" class="tab-panel" style="display:none">
+    <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:.5rem"><i class="bi bi-download"></i> Export Data dari Firebase</h3>
+    <p style="color:var(--dim);font-size:.85rem;margin-bottom:1.5rem">Semua data diambil langsung dari Firebase. Format berbeda dari template biasa.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+      <div class="card no-hover" style="padding:1.75rem;text-align:center">
+        <i class="bi bi-file-earmark-pdf-fill" style="font-size:3rem;color:var(--cyan);display:block;margin-bottom:.85rem"></i>
+        <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:.5rem;color:var(--cyan)">Laporan PDF</h4>
+        <p style="font-size:.84rem;color:var(--dim);margin-bottom:1.25rem;line-height:1.6">Header gelap FIFA branding · Kotak statistik berwarna · Top 3 disorot · Detail prediksi · Footer branded</p>
+        <div style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:1rem;text-align:left;font-size:.8rem;color:var(--mute)">
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Halaman 1: Header + Statistik + Leaderboard</div>
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Halaman 2: Detail semua prediksi skor</div>
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Distribusi prediksi juara</div>
+        </div>
+        <button onclick="downloadPDF()" class="btn btn-cyan btn-block btn-lg"><i class="bi bi-download"></i> Download PDF</button>
+      </div>
+      <div class="card no-hover" style="padding:1.75rem;text-align:center">
+        <i class="bi bi-file-earmark-excel-fill" style="font-size:3rem;color:var(--gold);display:block;margin-bottom:.85rem"></i>
+        <h4 style="font-family:'Bebas Neue',sans-serif;font-size:1.5rem;margin-bottom:.5rem;color:var(--gold)">Laporan Excel</h4>
+        <p style="font-size:.84rem;color:var(--dim);margin-bottom:1.25rem;line-height:1.6">5 sheet terpisah · Header berwarna · Top 3 disorot · Semua data prediksi · Hasil resmi</p>
+        <div style="display:flex;flex-direction:column;gap:.45rem;margin-bottom:1rem;text-align:left;font-size:.8rem;color:var(--mute)">
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Sheet 1: Ringkasan & Statistik</div>
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Sheet 2: Leaderboard Lengkap</div>
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Sheet 3: Semua Prediksi Skor</div>
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Sheet 4: Prediksi Juara + Distribusi</div>
+          <div><i class="bi bi-check-circle-fill" style="color:var(--green)"></i> Sheet 5: Hasil Resmi Pertandingan</div>
+        </div>
+        <button onclick="downloadExcel()" class="btn btn-gold btn-block btn-lg"><i class="bi bi-download"></i> Download Excel (5 Sheet)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div id="tab-settings" class="tab-panel" style="display:none">
+    <div class="card no-hover" style="padding:1.5rem;max-width:500px;margin-bottom:1.5rem">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;margin-bottom:.75rem"><i class="bi bi-trophy-fill" style="color:var(--gold)"></i> Set Juara Resmi</h3>
+      <p style="color:var(--dim);font-size:.84rem;margin-bottom:1rem">Set setelah Final. Peserta yang tepat mendapat +50 poin pada perhitungan berikutnya.</p>
+      <div style="display:flex;gap:.75rem;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px"><label class="label">Pilih Negara Juara</label>
+        <select id="champ-select" class="input"><option value="">- Pilih Negara -</option></select></div>
+        <button id="set-champ-btn" class="btn btn-gold"><i class="bi bi-save-fill"></i> Set Juara</button>
+      </div>
+      <div id="current-champ" style="margin-top:.85rem;font-size:.85rem;color:var(--dim)"></div>
+    </div>
+    <div class="card no-hover" style="padding:1.5rem;max-width:500px;border-color:rgba(255,68,68,.25)">
+      <h3 style="font-family:'Bebas Neue',sans-serif;font-size:1.4rem;margin-bottom:.5rem;color:#ff8585"><i class="bi bi-exclamation-triangle-fill"></i> Zona Berbahaya</h3>
+      <p style="color:var(--mute);font-size:.84rem;margin-bottom:1rem">Hapus data dari Firestore secara permanen.</p>
+      <div style="display:flex;gap:.6rem;flex-wrap:wrap">
+        <button onclick="clearCol('leaderboard')" class="btn btn-red btn-sm"><i class="bi bi-trash-fill"></i> Hapus Leaderboard</button>
+        <button onclick="clearCol('predictions')" class="btn btn-red btn-sm"><i class="bi bi-trash-fill"></i> Hapus Prediksi</button>
+        <button onclick="clearCol('results')" class="btn btn-red btn-sm"><i class="bi bi-trash-fill"></i> Hapus Hasil</button>
+        <button onclick="clearCol('champions')" class="btn btn-red btn-sm"><i class="bi bi-trash-fill"></i> Hapus Juara</button>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+<script>
+const ADMIN_PASS='admin2026';
+let allPreds=[],allChamps=[],officialChamp=null;
+function tryUnlock(p){
+  if(p===ADMIN_PASS){try{sessionStorage.setItem('wc26_admin','1');}catch{}
+    document.getElementById('gate').style.display='none';document.getElementById('panel').style.display='block';initPanel();
+  }else{const e=document.getElementById('pass-err');e.textContent='✕ Salah. Hint: admin2026';e.style.display='block';document.getElementById('pass-in').classList.add('err');}
+}
+document.addEventListener('DOMContentLoaded',()=>{
+  renderNav('admin.html');
+  document.getElementById('unlock-btn').addEventListener('click',()=>tryUnlock(document.getElementById('pass-in').value));
+  document.getElementById('pass-in').addEventListener('keydown',e=>{if(e.key==='Enter')tryUnlock(e.target.value);});
+  try{if(sessionStorage.getItem('wc26_admin')==='1')tryUnlock(ADMIN_PASS);}catch{}
+});
+function initPanel(){
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b===t));
+      document.querySelectorAll('.tab-panel').forEach(p=>p.style.display='none');
+      const panel=document.getElementById(t.dataset.tab);if(panel)panel.style.display='block';
+      if(t.dataset.tab==='tab-matches')renderMatchTeamsForm(document.getElementById('match-round-sel')?.value||'R16');
+      if(t.dataset.tab==='tab-results')renderResultsForm(document.getElementById('res-round-sel')?.value||'R16');
+    });
+  });
+  teamList().forEach(t=>{const o=document.createElement('option');o.value=t.code;o.textContent=t.name;document.getElementById('champ-select').appendChild(o);});
+  document.getElementById('set-champ-btn')?.addEventListener('click',setOfficialChamp);
+  document.getElementById('recalc-btn')?.addEventListener('click',recalculateScores);
+  startRealTimeListeners();
+  renderMatchTeamsForm('R16');renderResultsForm('R16');
+}
+function startRealTimeListeners(){
+  db.collection('predictions').onSnapshot(snap=>{allPreds=snap.docs.map(d=>({_id:d.id,...d.data()}));document.getElementById('db-preds').textContent=snap.size;renderPredsList();renderActivity();});
+  db.collection('champions').onSnapshot(snap=>{allChamps=snap.docs.map(d=>({_id:d.id,...d.data()}));document.getElementById('db-champs').textContent=snap.size;renderChampsList();});
+  db.collection('results').onSnapshot(snap=>{document.getElementById('db-results').textContent=snap.size;});
+  db.collection('leaderboard').onSnapshot(snap=>{document.getElementById('db-lb').textContent=snap.size;});
+  db.collection('meta').doc('officialChampion').onSnapshot(doc=>{
+    officialChamp=doc.exists?doc.data()?.team:null;
+    document.getElementById('current-champ').innerHTML=officialChamp?`Saat ini: <strong style="color:var(--gold)">${_esc(teamName(officialChamp))}</strong>`:'Belum ditentukan.';
+    renderChampsList();
+  });
+}
+let predFilter='';
+function searchPreds(){predFilter=(document.getElementById('pred-search')?.value||'').toLowerCase();renderPredsList();}
+function renderPredsList(){
+  const tbody=document.getElementById('preds-body');if(!tbody)return;
+  const list=predFilter?allPreds.filter(p=>(p.userName||'').toLowerCase().includes(predFilter)):allPreds;
+  const el=document.getElementById('preds-count');if(el)el.textContent=`${list.length} dari ${allPreds.length} prediksi`;
+  if(!list.length){tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--mute)"><i class="bi bi-inbox"></i> Tidak ada data.</td></tr>`;return;}
+  tbody.innerHTML=list.slice(0,100).map(p=>`<tr>
+    <td style="font-weight:600">${_esc(p.userName||'-')}</td>
+    <td><span class="badge badge-blue">${_esc(p.matchId||'-')}</span></td>
+    <td style="display:flex;align-items:center;gap:.4rem">${p.teamA?`<img src="${flagUrl(p.teamA,40)}" class="flag flag-sm" alt="">`:''}<span>${_esc(teamName(p.teamA)||p.teamA||'-')}</span></td>
+    <td style="text-align:center;font-family:monospace;font-weight:700;color:var(--cyan)">${p.predScoreA??'-'}–${p.predScoreB??'-'}</td>
+    <td>${_esc(teamName(p.teamB)||p.teamB||'-')}${p.teamB?`<img src="${flagUrl(p.teamB,40)}" class="flag flag-sm" alt="" style="display:inline;margin-left:.3rem">`:''}</td>
+    <td style="font-size:.76rem;color:var(--mute)">${p.savedAt?.toDate?p.savedAt.toDate().toLocaleString('id-ID'):'-'}</td>
+    <td>
+      <button onclick='editPred(${JSON.stringify({_id:p._id,userName:p.userName,matchId:p.matchId,teamA:p.teamA,teamB:p.teamB,predScoreA:p.predScoreA,predScoreB:p.predScoreB})})' class="btn btn-ghost btn-sm" style="margin-right:.3rem"><i class="bi bi-pencil-fill"></i></button>
+      <button onclick='delPred("${p._id}")' class="btn btn-red btn-sm"><i class="bi bi-trash-fill"></i></button>
+    </td></tr>`).join('');
+}
+function openAddPred(){openModal('<i class="bi bi-plus-circle-fill"></i> Tambah Prediksi',[
+  {name:'userName',label:'Nama Peserta',placeholder:'Nama…'},
+  {name:'matchId',label:'ID Pertandingan',placeholder:'R16-1, QF-1…'},
+  {name:'teamA',label:'Kode Tim A',placeholder:'BRA, ARG…'},
+  {name:'predScoreA',label:'Prediksi Skor A',type:'number',placeholder:'0'},
+  {name:'predScoreB',label:'Prediksi Skor B',type:'number',placeholder:'0'},
+  {name:'teamB',label:'Kode Tim B',placeholder:'GER, FRA…'},
+],async data=>{
+  if(!data.userName||!data.matchId)return toast('Nama dan Match ID wajib.','warn');
+  await db.collection('predictions').doc(`${slug(data.userName)}_${data.matchId}`).set({userName:data.userName.trim(),matchId:data.matchId.trim(),teamA:(data.teamA||'').toUpperCase()||null,teamB:(data.teamB||'').toUpperCase()||null,predScoreA:parseInt(data.predScoreA||0,10),predScoreB:parseInt(data.predScoreB||0,10),savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+  toast('<i class="bi bi-check-circle-fill"></i> Prediksi ditambahkan!','ok');
+});}
+function editPred(p){openModal('<i class="bi bi-pencil-fill"></i> Edit Prediksi - '+p.userName,[
+  {name:'predScoreA',label:`Skor ${teamName(p.teamA)||p.teamA} (A)`,type:'number',value:p.predScoreA},
+  {name:'predScoreB',label:`Skor ${teamName(p.teamB)||p.teamB} (B)`,type:'number',value:p.predScoreB},
+],async data=>{await db.collection('predictions').doc(p._id).update({predScoreA:parseInt(data.predScoreA||0,10),predScoreB:parseInt(data.predScoreB||0,10),savedAt:firebase.firestore.FieldValue.serverTimestamp()});toast('<i class="bi bi-check-circle-fill"></i> Diperbarui!','ok');});}
+async function delPred(id){if(!confirm('Hapus prediksi ini?'))return;await db.collection('predictions').doc(id).delete();toast('<i class="bi bi-trash-fill"></i> Prediksi dihapus.','info');}
+function renderChampsList(){
+  const tbody=document.getElementById('champs-body');if(!tbody)return;
+  if(!allChamps.length){tbody.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:2rem;color:var(--mute)">Belum ada prediksi juara.</td></tr>`;return;}
+  tbody.innerHTML=allChamps.map(c=>`<tr>
+    <td style="font-weight:600">${_esc(c.userName||'-')}</td>
+    <td style="display:flex;align-items:center;gap:.5rem">${c.championTeam?`<img src="${flagUrl(c.championTeam,40)}" class="flag flag-sm" alt="">`:''}<span>${_esc(teamName(c.championTeam)||'-')}</span></td>
+    <td>${officialChamp?(c.championTeam===officialChamp?'<span class="tag-ok"><i class="bi bi-check-circle-fill"></i> BENAR (+50)</span>':'<span class="tag-no"><i class="bi bi-x-circle-fill"></i> Salah</span>'):'<span style="color:var(--mute)">Belum dinilai</span>'}</td>
+    <td style="font-size:.76rem;color:var(--mute)">${c.savedAt?.toDate?c.savedAt.toDate().toLocaleString('id-ID'):'-'}</td>
+    <td>
+      <button onclick='editChamp(${JSON.stringify({_id:c._id,userName:c.userName})})' class="btn btn-ghost btn-sm" style="margin-right:.3rem"><i class="bi bi-pencil-fill"></i></button>
+      <button onclick='delChamp("${c._id}")' class="btn btn-red btn-sm"><i class="bi bi-trash-fill"></i></button>
+    </td></tr>`).join('');
+}
+function openAddChamp(){const opts=teamList().map(t=>`<option value="${t.code}">${_esc(t.name)}</option>`).join('');openModal('<i class="bi bi-trophy-fill"></i> Tambah Prediksi Juara',[{name:'userName',label:'Nama Peserta',placeholder:'Nama…'},{name:'championTeam',label:'Pilihan Juara',type:'select',options:opts}],async data=>{if(!data.userName||!data.championTeam)return toast('Nama dan negara wajib.','warn');await db.collection('champions').doc(slug(data.userName)).set({userName:data.userName.trim(),championTeam:data.championTeam,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});toast('<i class="bi bi-check-circle-fill"></i> Ditambahkan!','ok');});}
+function editChamp(c){const opts=teamList().map(t=>`<option value="${t.code}">${_esc(t.name)}</option>`).join('');openModal('<i class="bi bi-pencil-fill"></i> Edit Juara - '+c.userName,[{name:'championTeam',label:'Pilihan Juara Baru',type:'select',options:opts}],async data=>{await db.collection('champions').doc(c._id).update({championTeam:data.championTeam,savedAt:firebase.firestore.FieldValue.serverTimestamp()});toast('<i class="bi bi-check-circle-fill"></i> Diperbarui!','ok');});}
+async function delChamp(id){if(!confirm('Hapus prediksi juara ini?'))return;await db.collection('champions').doc(id).delete();toast('<i class="bi bi-trash-fill"></i> Dihapus.','info');}
+function renderActivity(){const el=document.getElementById('recent-activity');if(!el)return;const recent=[...allPreds].reverse().slice(0,6);if(!recent.length){el.innerHTML='<p style="color:var(--mute);font-size:.85rem">Belum ada aktivitas.</p>';return;}
+  el.innerHTML=recent.map(p=>`<div style="display:flex;align-items:center;gap:.75rem;padding:.55rem .7rem;background:var(--glass);border-radius:.75rem;margin-bottom:.4rem"><span class="badge badge-blue">${_esc(p.matchId||'?')}</span><span style="font-weight:600;font-size:.85rem">${_esc(p.userName||'?')}</span><span style="color:var(--cyan);font-family:monospace;font-weight:700;font-size:.85rem">${p.predScoreA??'?'}–${p.predScoreB??'?'}</span><span style="color:var(--mute);font-size:.76rem;margin-left:auto">${p.savedAt?.toDate?p.savedAt.toDate().toLocaleString('id-ID'):'-'}</span></div>`).join('');}
+function renderMatchTeamsForm(round){
+  const el=document.getElementById('match-teams-form');if(!el)return;
+  el.innerHTML='<div class="skel" style="height:8rem;border-radius:1rem"></div>';
+  db.collection('matchTeams').get().then(snap=>{
+    const ex={};snap.forEach(d=>{ex[d.id]=d.data();});
+    const teamOpts='<option value="">- TBD -</option>'+teamList().map(t=>`<option value="${t.code}">${_esc(t.name)}</option>`).join('');
+    el.innerHTML=getMatchesByRound(round).map(m=>{
+      const cur=ex[m.id]||{},selA=(cur.teamA||m.teamA||''),selB=(cur.teamB||m.teamB||'');
+      return `<div class="card no-hover" style="padding:1.1rem;margin-bottom:.75rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap"><span class="badge badge-blue">${m.id}</span><span style="font-size:.78rem;color:var(--mute)"><i class="bi bi-geo-alt-fill"></i> ${_esc(m.venue||'')}</span><span style="font-size:.78rem;color:var(--mute)"><i class="bi bi-calendar3"></i> ${m.date||''}</span></div>
+        <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.75rem">
+          <div><label class="label">Tim A</label><select class="input" id="mt-a-${m.id}">${teamOpts.replace(`value="${selA}"`,`value="${selA}" selected`)}</select></div>
+          <div style="font-family:'Bebas Neue',sans-serif;color:var(--mute);margin-top:1.3rem;text-align:center">VS</div>
+          <div><label class="label">Tim B</label><select class="input" id="mt-b-${m.id}">${teamOpts.replace(`value="${selB}"`,`value="${selB}" selected`)}</select></div>
+        </div>
+        <button class="btn btn-cyan btn-sm" style="margin-top:.75rem;width:100%" onclick="saveMatchTeams('${m.id}')"><i class="bi bi-save-fill"></i> Simpan Tim untuk ${m.id}</button>
+      </div>`;}).join('');
+  });
+}
+async function saveMatchTeams(matchId){
+  const tA=document.getElementById(`mt-a-${matchId}`)?.value||null,tB=document.getElementById(`mt-b-${matchId}`)?.value||null;
+  await db.collection('matchTeams').doc(matchId).set({teamA:tA,teamB:tB});
+  toast(`<i class="bi bi-check-circle-fill"></i> Tim disimpan untuk ${matchId}`,'ok');
+}
+function renderResultsForm(round){
+  const el=document.getElementById('results-form');if(!el)return;
+  el.innerHTML='<div class="skel" style="height:8rem;border-radius:1rem"></div>';
+  Promise.all([db.collection('results').get(),db.collection('matchTeams').get()]).then(([rSnap,tSnap])=>{
+    const res={};rSnap.forEach(d=>{res[d.id]=d.data();});const ov={};tSnap.forEach(d=>{ov[d.id]=d.data();});
+    el.innerHTML=getMatchesByRound(round).map(m=>{
+      const o=ov[m.id]||{},r=res[m.id]||{},tA=o.teamA||m.teamA,tB=o.teamB||m.teamB;
+      return `<div class="card no-hover" style="padding:1.1rem;margin-bottom:.75rem">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap">
+          <span class="badge badge-blue">${m.id}</span><span style="font-size:.82rem;font-weight:600;color:var(--dim)">${_esc(teamName(tA))} vs ${_esc(teamName(tB))}</span>
+          ${r.completed?'<span class="badge badge-green"><i class="bi bi-check-circle-fill"></i> Selesai</span>':''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto auto auto 1fr;align-items:center;gap:.7rem;margin-bottom:.75rem">
+          <div style="text-align:right">${tA&&tA!=='TBD'?`<img src="${flagUrl(tA,40)}" class="flag flag-md" style="margin-left:auto" alt="">`:''}<div style="font-weight:700;font-size:.88rem;margin-top:.25rem">${_esc(teamName(tA)||'TBD')}</div></div>
+          <input type="number" class="score-box" id="sa-${m.id}" min="0" max="30" placeholder="0" value="${r.scoreA??''}">
+          <span style="color:var(--mute);font-weight:700">–</span>
+          <input type="number" class="score-box" id="sb-${m.id}" min="0" max="30" placeholder="0" value="${r.scoreB??''}">
+          <div style="text-align:left">${tB&&tB!=='TBD'?`<img src="${flagUrl(tB,40)}" class="flag flag-md" alt="">`:''}<div style="font-weight:700;font-size:.88rem;margin-top:.25rem">${_esc(teamName(tB)||'TBD')}</div></div>
+        </div>
+        <div style="display:flex;gap:.65rem;align-items:center;flex-wrap:wrap">
+          <div><label class="label">Ditentukan Lewat</label>
+          <select class="input" id="dec-${m.id}" style="min-width:150px">
+            <option value="normal" ${(r.decidedBy||'normal')==='normal'?'selected':''}>Waktu Normal</option>
+            <option value="et" ${r.decidedBy==='et'?'selected':''}>Perpanjangan Waktu</option>
+            <option value="pens" ${r.decidedBy==='pens'?'selected':''}>Adu Penalti</option>
+          </select></div>
+          <div style="margin-top:auto">
+            <button class="btn btn-cyan btn-sm" onclick="saveResult('${m.id}','${tA||''}','${tB||''}')"><i class="bi bi-save-fill"></i> Simpan Hasil</button>
+            ${r.completed?`<button class="btn btn-red btn-sm" onclick="deleteResult('${m.id}')" style="margin-left:.4rem"><i class="bi bi-trash-fill"></i></button>`:''}
+          </div>
+        </div></div>`;
+    }).join('');
+  });
+}
+async function saveResult(matchId,tA,tB){
+  const sA=parseInt(document.getElementById(`sa-${matchId}`)?.value,10),sB=parseInt(document.getElementById(`sb-${matchId}`)?.value,10);
+  const dec=document.getElementById(`dec-${matchId}`)?.value||'normal';
+  if(isNaN(sA)||isNaN(sB))return toast('Masukkan skor valid.','warn');
+  let winner=sA>sB?tA:sB>sA?tB:null;
+  if(!winner&&dec==='pens'){winner=prompt(`Pemenang adu penalti (${tA} atau ${tB}):`);if(winner!==tA&&winner!==tB)return toast('Kode tim tidak valid.','err');}
+  await db.collection('results').doc(matchId).set({matchId,scoreA:sA,scoreB:sB,teamA:tA,teamB:tB,winner:winner||null,decidedBy:dec,completed:true,savedAt:firebase.firestore.FieldValue.serverTimestamp()});
+  toast(`<i class="bi bi-check-circle-fill"></i> Hasil: ${teamName(tA)} ${sA}–${sB} ${teamName(tB)}`,'ok');
+  renderResultsForm(document.getElementById('res-round-sel')?.value||'R16');
+}
+async function deleteResult(matchId){if(!confirm(`Hapus hasil ${matchId}?`))return;await db.collection('results').doc(matchId).delete();toast('<i class="bi bi-trash-fill"></i> Hasil dihapus.','info');renderResultsForm(document.getElementById('res-round-sel')?.value||'R16');}
+async function recalculateScores(){
+  const btn=document.getElementById('recalc-btn'),log=document.getElementById('recalc-log');
+  btn.disabled=true;btn.innerHTML='<i class="bi bi-hourglass-split"></i> Menghitung…';log.innerHTML='<p style="color:var(--cyan)">Membaca data Firebase…</p>';
+  try{
+    const[pSnap,bpSnap,cSnap,rSnap,metaDoc]=await Promise.all([db.collection('predictions').get(),db.collection('bracketPicks').get(),db.collection('champions').get(),db.collection('results').get(),db.collection('meta').doc('officialChampion').get()]);
+    const ress={};rSnap.forEach(d=>{ress[d.id]=d.data();});const oChamp=metaDoc.exists?metaDoc.data().team:null;
+    const stats={};
+    const bkt=n=>{if(!stats[n])stats[n]={userName:n,points:0,predictionsCount:0,exactCount:0,correctWinnerCount:0,bracketCorrectCount:0,championPick:null,championCorrect:false};return stats[n];};
+    pSnap.forEach(d=>{
+      const p=d.data(),b=bkt(p.userName),r=ress[p.matchId];b.predictionsCount++;if(!r||!r.completed)return;
+      if(p.predScoreA===r.scoreA&&p.predScoreB===r.scoreB){b.points+=15;b.exactCount++;}
+      else{const pw=p.predScoreA>p.predScoreB?p.teamA:p.predScoreA<p.predScoreB?p.teamB:'draw';const rw=r.winner||(r.scoreA>r.scoreB?r.teamA:r.scoreA<r.scoreB?r.teamB:'draw');if(pw===rw){b.points+=5;b.correctWinnerCount++;}}
+    });
+    bpSnap.forEach(d=>{const bp=d.data(),b=bkt(bp.userName);Object.entries(bp.picks||{}).forEach(([mid,picked])=>{const r=ress[mid];if(r&&r.winner&&picked===r.winner){b.points+=5;b.bracketCorrectCount++;}});});
+    cSnap.forEach(d=>{const c=d.data(),b=bkt(c.userName);b.championPick=c.championTeam;if(oChamp&&c.championTeam===oChamp){b.points+=50;b.championCorrect=true;}});
+    const lb=Object.values(stats).sort((a,b)=>b.points-a.points);
+    const batch=db.batch();lb.forEach(e=>batch.set(db.collection('leaderboard').doc(slug(e.userName)),e));await batch.commit();
+    log.innerHTML=`<span class="badge badge-green" style="margin-bottom:.75rem"><i class="bi bi-check-circle-fill"></i> Selesai - ${lb.length} peserta dihitung</span>${lb.length?`<p>Pemimpin: <strong>${_esc(lb[0].userName)}</strong> - <strong style="color:var(--cyan)">${lb[0].points} poin</strong></p>`:''}`;
+    toast(`<i class="bi bi-check-circle-fill"></i> Leaderboard diperbarui - ${lb.length} peserta`,'ok');
+  }catch(e){console.error(e);toast('Error: '+e.message,'err',7000);log.innerHTML=`<p style="color:var(--red)">Error: ${_esc(String(e))}</p><p style="color:var(--mute);font-size:.8rem;margin-top:.4rem"><i class="bi bi-info-circle-fill"></i> Penyebab umum: Firestore rules memblokir. Buka Firebase Console → Rules → set allow read, write: if true;</p>`;}
+  finally{btn.disabled=false;btn.innerHTML='<i class="bi bi-arrow-repeat"></i> Hitung & Update Leaderboard';}
+}
+async function setOfficialChamp(){const team=document.getElementById('champ-select')?.value;if(!team)return toast('Pilih negara dulu.','warn');await db.collection('meta').doc('officialChampion').set({team,setAt:firebase.firestore.FieldValue.serverTimestamp()});toast(`<i class="bi bi-trophy-fill"></i> Juara resmi: ${teamName(team)}`,'ok');}
+async function clearCol(name){if(!confirm(`Hapus SEMUA di '${name}'?`))return;const snap=await db.collection(name).get();const batch=db.batch();snap.forEach(d=>batch.delete(d.ref));await batch.commit();toast(`<i class="bi bi-trash-fill"></i> ${snap.size} dokumen dihapus dari '${name}'.`,'info');}
+async function handleCSVImport(){const f=document.getElementById('csv-file')?.files[0];if(!f)return toast('Pilih file CSV dulu.','warn');try{await importFromCSV(f);}catch{}}
+async function handleXLSXImport(){const f=document.getElementById('xlsx-file')?.files[0];if(!f)return toast('Pilih file Excel dulu.','warn');try{await importFromExcel(f);}catch{}}
+let _modalSaveFn=null;
+function openModal(title,fields,saveFn){
+  document.getElementById('modal-title').innerHTML=title;
+  document.getElementById('modal-body').innerHTML=fields.map(f=>`<div class="field"><label class="label">${_esc(f.label)}</label>${f.type==='select'?`<select name="${f.name}" class="input">${f.options||''}</select>`:`<input type="${f.type||'text'}" name="${f.name}" class="input" value="${f.value??''}" placeholder="${_esc(f.placeholder||'')}">` }</div>`).join('');
+  _modalSaveFn=saveFn;document.getElementById('crud-modal').classList.add('open');
+}
+function closeModal(){document.getElementById('crud-modal').classList.remove('open');}
+document.getElementById('modal-save')?.addEventListener('click',async()=>{
+  const data={};document.querySelectorAll('#modal-body input,#modal-body select').forEach(el=>{data[el.name]=el.value;});
+  if(_modalSaveFn)await _modalSaveFn(data);closeModal();
+});
+document.getElementById('crud-modal')?.addEventListener('click',e=>{if(e.target===e.currentTarget)closeModal();});
+</script></body></html>

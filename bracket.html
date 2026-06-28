@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Bracket - WC2026 Hub</title>
+<link rel="stylesheet" href="css/style.css"/>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="js/data.js"></script>
+<script src="js/shared.js"></script>
+<style>
+/* ── FOX-STYLE DUAL-SIDE BRACKET ─────────────────────────────── */
+.fox-bracket-wrap{overflow-x:auto;padding:1rem 0 2rem;-webkit-overflow-scrolling:touch}
+.fox-bracket-wrap::-webkit-scrollbar{height:8px}
+.fox-bracket-wrap::-webkit-scrollbar-thumb{background:rgba(0,212,255,.25);border-radius:999px}
+
+.fox-bracket{display:grid;grid-template-columns:1fr auto 1fr;gap:0;min-width:980px;align-items:center;position:relative}
+
+/* LEFT & RIGHT column groups */
+.bracket-side{display:flex;gap:0;width:100%}
+.bracket-side.left{flex-direction:row}
+.bracket-side.right{flex-direction:row-reverse}
+
+.b-round-col{display:flex;flex-direction:column;justify-content:space-around;flex:1;gap:.4rem;padding:0 .3rem}
+.b-round-col.r32{min-width:140px}
+.b-round-col.r16{min-width:130px}
+.b-round-col.qf {min-width:130px}
+.b-round-col.sf {min-width:130px}
+.b-round-col.final-left, .b-round-col.final-right{min-width:120px}
+
+/* Center trophy/champion column */
+.bracket-center{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:.75rem;padding:0 .75rem;min-width:160px;z-index:2}
+.center-logo{display:flex;flex-direction:column;align-items:center;gap:.4rem;margin-bottom:.5rem}
+.center-logo img{width:52px;height:52px;object-fit:contain;drop-shadow:0 0 20px rgba(255,215,0,.6)}
+.center-year{font-family:'Bebas Neue',sans-serif;font-size:3.2rem;line-height:1;
+  background:linear-gradient(180deg,#fff5b0,var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+.center-cup{font-size:.7rem;text-transform:uppercase;letter-spacing:.14em;color:var(--gold);font-weight:700}
+.champion-slot{background:linear-gradient(135deg,rgba(255,215,0,.15),rgba(255,150,0,.08));
+  border:2px solid rgba(255,215,0,.45);border-radius:1rem;padding:.9rem 1.1rem;
+  min-width:140px;text-align:center;box-shadow:0 0 32px rgba(255,215,0,.18);
+  font-family:'Bebas Neue',sans-serif;letter-spacing:.08em}
+.champion-label{font-size:.58rem;text-transform:uppercase;letter-spacing:.16em;color:var(--gold);margin-bottom:.3rem;font-weight:700}
+.champion-name{font-size:1.05rem;color:var(--text)}
+
+/* Round column headers */
+.round-col-hdr{text-align:center;font-size:.6rem;text-transform:uppercase;letter-spacing:.12em;
+  color:var(--mute);font-weight:700;padding:.3rem .5rem;background:var(--glass);
+  border-radius:.5rem;border:1px solid var(--border2);margin-bottom:.4rem;white-space:nowrap}
+
+/* Match card */
+.bx-match{display:flex;flex-direction:column;border-radius:.75rem;overflow:hidden;
+  background:rgba(4,13,38,.85);border:1px solid var(--border2);
+  transition:border-color .2s;backdrop-filter:blur(12px);margin-bottom:.35rem}
+.bx-match:hover{border-color:rgba(0,212,255,.30)}
+
+.bx-slot{display:flex;align-items:center;gap:.45rem;padding:.42rem .6rem;
+  font-size:.78rem;font-weight:600;border-bottom:1px solid rgba(255,255,255,.05);
+  cursor:default;transition:background .18s,color .18s;min-height:2.1rem;position:relative}
+.bx-slot:last-child{border-bottom:none}
+.bx-slot.can-pick{cursor:pointer}
+.bx-slot.can-pick:hover{background:rgba(0,212,255,.10);color:var(--cyan)}
+.bx-slot.picked{background:linear-gradient(100deg,rgba(0,212,255,.22),rgba(0,87,255,.15));
+  color:var(--cyan);box-shadow:inset 3px 0 0 var(--cyan)}
+.bx-slot.official-win{background:linear-gradient(100deg,rgba(0,255,136,.18),rgba(0,255,136,.05));
+  color:var(--green);box-shadow:inset 3px 0 0 var(--green)}
+.bx-slot.tbd{color:var(--mute);font-style:italic}
+
+.bx-flag{width:18px;height:18px;border-radius:50%;object-fit:cover;flex-shrink:0;
+  background:rgba(255,255,255,.08)}
+.bx-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.76rem}
+.bx-score{font-family:'Space Grotesk',monospace;font-size:.72rem;font-weight:700;
+  color:var(--cyan);background:rgba(0,212,255,.12);border-radius:.3rem;
+  padding:.05rem .28rem;flex-shrink:0}
+.bx-icon{font-size:.6rem;flex-shrink:0}
+
+/* Right side slots mirror (name on left, flag on right) */
+.bracket-side.right .bx-slot{flex-direction:row-reverse;text-align:right}
+.bracket-side.right .bx-slot.picked{box-shadow:inset -3px 0 0 var(--cyan)}
+.bracket-side.right .bx-slot.official-win{box-shadow:inset -3px 0 0 var(--green)}
+.bracket-side.right .bx-name{text-align:right}
+
+/* Connector lines via pseudo-elements */
+.bx-match-group{position:relative;display:flex;flex-direction:column}
+
+/* Round of 32 spacing adjustments */
+.r32 .bx-match{margin-bottom:.28rem}
+.r32 .bx-match-group{margin-bottom:.6rem}
+
+/* Mode toggle bar */
+.bracket-mode-bar{display:flex;flex-wrap:wrap;align-items:center;gap:.85rem;
+  background:var(--surface);border:1px solid var(--border);border-radius:1.1rem;
+  padding:.85rem 1.1rem;margin-bottom:1.2rem;backdrop-filter:blur(18px)}
+</style>
+</head>
+<body>
+<div id="app-nav"></div>
+<main class="page container">
+
+<div style="margin-bottom:1.5rem">
+  <div class="eyebrow" style="background:rgba(255,215,0,.10);border-color:rgba(255,215,0,.28);color:var(--gold)"><i class="bi bi-diagram-3-fill"></i> Knockout Bracket</div>
+  <h1 style="font-family:'Bebas Neue',sans-serif;font-size:clamp(2.2rem,5vw,4rem);margin-bottom:.4rem"><span class="grad-gold">Bracket</span> Picks</h1>
+  <p style="color:var(--dim);font-size:.92rem;max-width:52ch">Lihat bracket resmi atau pilih tim yang akan maju. Setiap prediksi benar = <strong style="color:var(--green)">+5 pts</strong>.</p>
+</div>
+
+<div class="bracket-mode-bar">
+  <div class="tabs" style="flex:0 0 auto">
+    <button class="tab on" data-mode="official"><i class="bi bi-eye-fill"></i> Official</button>
+    <button class="tab" data-mode="mine"><i class="bi bi-pencil-fill"></i> My Bracket</button>
+  </div>
+  <div style="flex:1;min-width:190px">
+    <label class="label" for="bname"><i class="bi bi-person-fill"></i> Nama (untuk simpan)</label>
+    <input type="text" id="bname" class="input" placeholder="Masukkan nama…" maxlength="30" style="margin-bottom:0"/>
+    <span id="bname-err" class="err-msg"></span>
+  </div>
+  <button id="save-bracket" class="btn btn-gold" style="display:none"><i class="bi bi-save-fill"></i> Simpan Bracket</button>
+</div>
+
+<div style="display:flex;gap:.6rem;flex-wrap:wrap;margin-bottom:1.1rem">
+  <span class="badge badge-green"><i class="bi bi-check-circle-fill"></i> Pemenang resmi</span>
+  <span class="badge badge-cyan"><i class="bi bi-star-fill"></i> Pilihanku</span>
+  <span class="badge badge-mute">TBD</span>
+</div>
+
+<div class="fox-bracket-wrap">
+  <div class="fox-bracket" id="fox-bracket">
+    <!-- Populated by JS -->
+    <div style="text-align:center;padding:3rem;color:var(--mute)"><i class="bi bi-arrow-repeat" style="animation:spin 1s linear infinite;font-size:1.5rem"></i></div>
+  </div>
+</div>
+
+<div class="card no-hover" style="padding:.9rem 1.2rem;margin-top:1.2rem;font-size:.82rem;color:var(--dim)">
+  <i class="bi bi-info-circle-fill" style="color:var(--cyan)"></i>
+  <strong style="color:var(--text)"> Cara kerja:</strong> Bracket Round of 32 sudah terisi tim resmi. Mode <em>My Bracket</em>: klik tim untuk prediksi siapa yang maju, simpan untuk berbagi prediksimu.
+</div>
+</main>
+
+<style>
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+</style>
+
+<script>
+let mode='official', officialResults={}, adminTeams={}, myPicks={};
+
+// Left-side R32 pairs → R16 → QF → SF → Final
+const LEFT_R32  = ['R32-1','R32-2','R32-3','R32-4','R32-5','R32-6','R32-7','R32-8'];
+const RIGHT_R32 = ['R32-9','R32-10','R32-11','R32-12','R32-13','R32-14','R32-15','R32-16'];
+const LEFT_R16  = ['R16-1','R16-2','R16-3','R16-4'];
+const RIGHT_R16 = ['R16-5','R16-6','R16-7','R16-8'];
+const LEFT_QF   = ['QF-1','QF-2'];
+const RIGHT_QF  = ['QF-3','QF-4'];
+const LEFT_SF   = ['SF-1'];
+const RIGHT_SF  = ['SF-2'];
+const FINAL_ID  = 'F-1';
+
+function resolveTeam(matchId, side) {
+  // Check admin override first
+  const ov = adminTeams[matchId];
+  if (ov && ov[side]) return ov[side];
+  // Fallback to static data
+  const m = ALL_MATCHES.find(x=>x.id===matchId);
+  if (!m) return null;
+  const code = side==='teamA'?m.teamA:m.teamB;
+  return (code && code!=='TBD') ? code : null;
+}
+
+function bxSlot(matchId, side, mirrorRight) {
+  const team = resolveTeam(matchId, side);
+  const res  = officialResults[matchId];
+  const name = team ? teamName(team) : 'TBD';
+  const fUrl = team ? flagUrl(team, 40) : '';
+  const isTbd = !team;
+  const isWin = !isTbd && res && res.winner===team;
+  const isPick = !isTbd && mode==='mine' && myPicks[matchId]===team;
+  const canPick = mode==='mine' && !isTbd && !res;
+
+  let cls = 'bx-slot';
+  if(isTbd) cls+=' tbd';
+  else if(isWin) cls+=' official-win';
+  else if(isPick) cls+=' picked';
+  if(canPick) cls+=' can-pick';
+
+  const dt = !isTbd ? `data-match="${matchId}" data-team="${team}"` : '';
+  const scoreVal = res && !isNaN(res.scoreA) ? (side==='teamA'?res.scoreA:res.scoreB) : null;
+
+  const flagEl = fUrl ? `<img src="${fUrl}" class="bx-flag" alt="${name}">` : `<span class="bx-flag" style="border:1px dashed var(--border2)"></span>`;
+  const iconEl = isWin ? `<i class="bi bi-check-circle-fill bx-icon" style="color:var(--green)"></i>` : isPick ? `<i class="bi bi-star-fill bx-icon" style="color:var(--cyan)"></i>` : '';
+  const scoreEl = scoreVal!==null ? `<span class="bx-score">${scoreVal}</span>` : '';
+
+  return `<div class="${cls}" ${dt} ${canPick?'role="button" tabindex="0"':''}>
+    ${flagEl}
+    <span class="bx-name">${name}</span>
+    ${iconEl}${scoreEl}
+  </div>`;
+}
+
+function bxMatch(matchId, mirrorRight=false) {
+  return `<div class="bx-match" data-match-id="${matchId}">
+    ${bxSlot(matchId,'teamA',mirrorRight)}
+    ${bxSlot(matchId,'teamB',mirrorRight)}
+  </div>`;
+}
+
+// Group matches into pairs for alignment
+function pairMatches(ids, mirrorRight=false) {
+  const pairs=[];
+  for(let i=0;i<ids.length;i+=2){
+    const a=ids[i], b=ids[i+1];
+    pairs.push(`<div class="bx-match-group">
+      ${bxMatch(a,mirrorRight)}
+      ${b?bxMatch(b,mirrorRight):''}
+    </div>`);
+  }
+  return pairs.join('');
+}
+
+function roundCol(cls, label, ids, mirrorRight=false) {
+  return `<div class="b-round-col ${cls}">
+    <div class="round-col-hdr">${label}</div>
+    ${pairMatches(ids, mirrorRight)}
+  </div>`;
+}
+
+function champSlot() {
+  const m = ALL_MATCHES.find(x=>x.id===FINAL_ID);
+  const res = officialResults[FINAL_ID];
+  let winner = null;
+  if(res && res.winner) winner = res.winner;
+  else if(mode==='mine' && myPicks[FINAL_ID]) winner = myPicks[FINAL_ID];
+  const dispName = winner ? teamName(winner) : '?';
+  const fUrl = winner ? flagUrl(winner,40) : '';
+  return `<div class="champion-slot">
+    <div class="champion-label"><i class="bi bi-trophy-fill" style="color:var(--gold)"></i> Champion</div>
+    ${fUrl?`<img src="${fUrl}" style="width:32px;height:32px;border-radius:50%;margin:.35rem auto;display:block" alt="${dispName}">`:'<div style="width:32px;height:32px;border-radius:50%;background:var(--glass);border:1px dashed var(--border2);margin:.35rem auto"></div>'}
+    <div style="font-family:\'Bebas Neue\',sans-serif;font-size:1.05rem;color:${winner?'var(--gold)':'var(--mute)'}">${dispName}</div>
+  </div>`;
+}
+
+function renderBracket() {
+  const container = document.getElementById('fox-bracket');
+  const leftSide = `<div class="bracket-side left">
+    ${roundCol('r32','Round of 32',LEFT_R32,false)}
+    ${roundCol('r16','R16',LEFT_R16,false)}
+    ${roundCol('qf','QF',LEFT_QF,false)}
+    ${roundCol('sf','SF',LEFT_SF,false)}
+  </div>`;
+
+  const rightSide = `<div class="bracket-side right">
+    ${roundCol('r32','Round of 32',RIGHT_R32,true)}
+    ${roundCol('r16','R16',RIGHT_R16,true)}
+    ${roundCol('qf','QF',RIGHT_QF,true)}
+    ${roundCol('sf','SF',RIGHT_SF,true)}
+  </div>`;
+
+  const center = `<div class="bracket-center">
+    <div class="center-logo">
+      <div class="center-year">26</div>
+      <div class="center-cup">FIFA World Cup</div>
+    </div>
+    ${champSlot()}
+    <div style="text-align:center;font-size:.66rem;color:var(--mute)">Final · 19 Jul 2026<br>MetLife Stadium</div>
+  </div>`;
+
+  container.innerHTML = leftSide + center + rightSide;
+
+  // Attach pick handlers
+  if(mode==='mine'){
+    container.querySelectorAll('.bx-slot.can-pick').forEach(sl=>{
+      sl.addEventListener('click',()=>handlePick(sl.dataset.match, sl.dataset.team));
+      sl.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();handlePick(sl.dataset.match,sl.dataset.team);}});
+    });
+  }
+}
+
+function handlePick(matchId, team) {
+  if(!team || !matchId) return;
+  myPicks[matchId] = team;
+  cascadeWinner(matchId, team);
+  renderBracket();
+}
+
+function cascadeWinner(wonId, team) {
+  const nextMap = {
+    // R32 → R16
+    'R32-1':'R16-1','R32-2':'R16-1',
+    'R32-3':'R16-2','R32-4':'R16-2',
+    'R32-5':'R16-3','R32-6':'R16-3',
+    'R32-7':'R16-4','R32-8':'R16-4',
+    'R32-9':'R16-5','R32-10':'R16-5',
+    'R32-11':'R16-6','R32-12':'R16-6',
+    'R32-13':'R16-7','R32-14':'R16-7',
+    'R32-15':'R16-8','R32-16':'R16-8',
+    // R16 → QF
+    'R16-1':'QF-1','R16-2':'QF-1',
+    'R16-3':'QF-2','R16-4':'QF-2',
+    'R16-5':'QF-3','R16-6':'QF-3',
+    'R16-7':'QF-4','R16-8':'QF-4',
+    // QF → SF
+    'QF-1':'SF-1','QF-2':'SF-1',
+    'QF-3':'SF-2','QF-4':'SF-2',
+    // SF → F
+    'SF-1':'F-1','SF-2':'F-1',
+  };
+  const slotAMap = new Set(['R32-1','R32-3','R32-5','R32-7','R32-9','R32-11','R32-13','R32-15',
+    'R16-1','R16-3','R16-5','R16-7','QF-1','QF-3','SF-1']);
+
+  const nextId = nextMap[wonId]; if(!nextId) return;
+  if(!adminTeams[nextId]) adminTeams[nextId]={};
+  const isSlotA = slotAMap.has(wonId);
+  adminTeams[nextId][isSlotA?'teamA':'teamB'] = team;
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  renderNav('bracket.html');
+  const savedName = getSavedName();
+  if(savedName) document.getElementById('bname').value=savedName;
+
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.addEventListener('click',()=>{
+      mode=t.dataset.mode;
+      document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b===t));
+      const sb=document.getElementById('save-bracket');
+      if(sb) sb.style.display=mode==='mine'?'inline-flex':'none';
+      renderBracket();
+    });
+  });
+
+  document.getElementById('save-bracket')?.addEventListener('click', async()=>{
+    const btn=document.getElementById('save-bracket');
+    const rawName=document.getElementById('bname').value.trim();
+    const vn=validateName(rawName), errEl=document.getElementById('bname-err');
+    if(!vn.ok){errEl.textContent=vn.msg;errEl.style.display='block';return;}
+    errEl.style.display='none'; saveName(vn.val);
+    const pickCount=Object.keys(myPicks).length;
+    if(!pickCount){toast('Pilih minimal satu tim dulu!','warn');return;}
+    btn.disabled=true; btn.innerHTML='<i class="bi bi-hourglass-split"></i> Menyimpan…';
+    try{
+      await db.collection('bracketPicks').doc(slug(vn.val)).set({
+        userName:vn.val, picks:myPicks, savedAt:firebase.firestore.FieldValue.serverTimestamp()
+      });
+      toast(`<i class="bi bi-check-circle-fill"></i> Bracket tersimpan! (${pickCount} pilihan)`,'ok');
+      confetti(2200);
+    }catch(err){toast('Gagal: '+err.message,'err',5000);}
+    finally{btn.disabled=false; btn.innerHTML='<i class="bi bi-save-fill"></i> Simpan Bracket';}
+  });
+
+  document.getElementById('bname').addEventListener('change',e=>{
+    saveName(e.target.value);
+    const nm=e.target.value.trim(); if(!nm) return;
+    db.collection('bracketPicks').doc(slug(nm)).get().then(doc=>{
+      if(doc.exists){myPicks=doc.data().picks||{};renderBracket();}
+    });
+  });
+
+  // Live listeners
+  db.collection('results').onSnapshot(snap=>{
+    officialResults={};
+    snap.forEach(d=>{officialResults[d.id]=d.data();});
+    renderBracket();
+  });
+  db.collection('matchTeams').onSnapshot(snap=>{
+    snap.forEach(d=>{adminTeams[d.id]=d.data();});
+    renderBracket();
+  });
+
+  if(savedName){
+    db.collection('bracketPicks').doc(slug(savedName)).get().then(doc=>{
+      if(doc.exists){myPicks=doc.data().picks||{};renderBracket();}
+    });
+  }
+  renderBracket();
+});
+</script>
+</body>
+</html>
